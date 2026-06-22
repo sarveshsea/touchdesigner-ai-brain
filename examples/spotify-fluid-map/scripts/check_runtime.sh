@@ -9,6 +9,10 @@ TD_REPORT="$EXAMPLE_DIR/runtime/td_runtime_report.txt"
 BRIDGE_LABEL="com.sarveshsea.spotify-fluid-map.bridge"
 UID_VALUE="$(id -u)"
 
+if [[ "${1:-}" == "--refresh-td" ]]; then
+  "$SCRIPT_DIR/rebuild_touchdesigner_macos.sh" >/dev/null
+fi
+
 echo "Spotify Fluid Map runtime check"
 echo "Repo: $REPO_ROOT"
 echo
@@ -54,7 +58,13 @@ echo
 
 echo "TouchDesigner report:"
 if [[ -f "$TD_REPORT" ]]; then
+  if stat -f "%Sm" "$TD_REPORT" >/tmp/spotify-fluid-map-td-report-time.txt 2>/dev/null; then
+    echo "  snapshot: $(cat /tmp/spotify-fluid-map-td-report-time.txt)"
+    rm -f /tmp/spotify-fluid-map-td-report-time.txt
+  fi
+  echo "  refresh: examples/spotify-fluid-map/scripts/check_runtime.sh --refresh-td"
   sed -n '1,80p' "$TD_REPORT"
 else
   echo "  missing: $TD_REPORT"
+  echo "  create it with: examples/spotify-fluid-map/scripts/rebuild_touchdesigner_macos.sh"
 fi

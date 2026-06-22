@@ -162,13 +162,47 @@ def _build_audio_lane(root):
     _connect(gain, audio)
     _set_par(gain, "gain", expr="parent().par.Sensitivity")
 
-    script = _create(root, "textDAT", "audio_analysis_script", -600, 100)
-    script.text = AUDIO_ANALYSIS_SCRIPT
+    spectrum = _create(root, "audiospectrumCHOP", "audio_spectrum", -360, 360, (0.12, 0.22, 0.16))
+    _connect(spectrum, gain)
+    _set_par(spectrum, "mode", "visual")
+    _set_par(spectrum, "fftsize", 2048)
+    _set_par(spectrum, "outputmenu", "setmanually")
+    _set_par(spectrum, "outlength", 512)
+    _set_par(spectrum, "timeslice", False)
 
-    analysis = _create(root, "scriptCHOP", "audio_analysis_chop", -360, 280, (0.12, 0.22, 0.16))
-    _connect(analysis, gain)
-    _set_par(analysis, "callbacks", script.path)
-    _set_par(analysis, "timeslice", False)
+    low = _build_spectrum_band(root, spectrum, "low", 0, 60, -120, 520, 2.4)
+    mid = _build_spectrum_band(root, spectrum, "mid", 61, 230, -120, 360, 2.0)
+    high = _build_spectrum_band(root, spectrum, "high", 231, 511, -120, 200, 2.8)
+
+    rms = _create(root, "analyzeCHOP", "rms_power", -360, 120, (0.12, 0.22, 0.16))
+    _connect(rms, gain)
+    _set_par(rms, "function", "rmspower")
+    _set_par(rms, "timeslice", False)
+
+    rms_gain = _create(root, "mathCHOP", "rms_gain", -120, 120, (0.12, 0.22, 0.16))
+    _connect(rms_gain, rms)
+    _set_par(rms_gain, "gain", 7.5)
+    _set_par(rms_gain, "fromrange1", 0)
+    _set_par(rms_gain, "fromrange2", 1)
+    _set_par(rms_gain, "torange1", 0)
+    _set_par(rms_gain, "torange2", 1)
+
+    rms_name = _create(root, "renameCHOP", "rms_rename", 120, 120, (0.12, 0.22, 0.16))
+    _connect(rms_name, rms_gain)
+    _set_par(rms_name, "renamefrom", "*")
+    _set_par(rms_name, "renameto", "rms")
+
+    energy_name = _create(root, "renameCHOP", "energy_from_rms", 120, -20, (0.12, 0.22, 0.16))
+    _connect(energy_name, rms_gain)
+    _set_par(energy_name, "renamefrom", "*")
+    _set_par(energy_name, "renameto", "energy")
+
+    kick = _build_audio_trigger(root, low, "kick", 120, 520, 0.18)
+    snare = _build_audio_trigger(root, high, "snare", 120, 200, 0.14)
+
+    analysis = _create(root, "mergeCHOP", "merge_audio_analysis", 380, 280, (0.12, 0.22, 0.16))
+    for index, source in enumerate([low, mid, high, rms_name, energy_name, kick, snare]):
+        _connect(analysis, source, index)
 
     smooth = _create(root, "filterCHOP", "audio_smooth", -120, 280, (0.12, 0.22, 0.16))
     _connect(smooth, analysis)
@@ -177,6 +211,56 @@ def _build_audio_lane(root):
     null_audio = _create(root, "nullCHOP", "null_audio_analysis", 140, 280, (0.12, 0.22, 0.16))
     _connect(null_audio, smooth)
     return null_audio
+
+
+def _build_spectrum_band(root, spectrum, name, start, end, x, y, gain):
+    trim = _create(root, "trimCHOP", name + "_spectrum_slice", x, y, (0.12, 0.22, 0.16))
+    _connect(trim, spectrum)
+    _set_par(trim, "relative", "abs")
+    _set_par(trim, "start", start)
+    _set_par(trim, "startunit", "samples")
+    _set_par(trim, "end", end)
+    _set_par(trim, "endunit", "samples")
+    _set_par(trim, "timeslice", False)
+
+    analyze = _create(root, "analyzeCHOP", name + "_level", x + 220, y, (0.12, 0.22, 0.16))
+    _connect(analyze, trim)
+    _set_par(analyze, "function", "average")
+    _set_par(analyze, "timeslice", False)
+
+    scale = _create(root, "mathCHOP", name + "_level_gain", x + 440, y, (0.12, 0.22, 0.16))
+    _connect(scale, analyze)
+    _set_par(scale, "gain", gain)
+    _set_par(scale, "fromrange1", 0)
+    _set_par(scale, "fromrange2", 1)
+    _set_par(scale, "torange1", 0)
+    _set_par(scale, "torange2", 1)
+
+    rename = _create(root, "renameCHOP", name + "_rename", x + 660, y, (0.12, 0.22, 0.16))
+    _connect(rename, scale)
+    _set_par(rename, "renamefrom", "*")
+    _set_par(rename, "renameto", name)
+    return rename
+
+
+def _build_audio_trigger(root, source, name, x, y, threshold):
+    trigger = _create(root, "triggerCHOP", name + "_trigger", x, y - 70, (0.12, 0.22, 0.16))
+    _connect(trigger, source)
+    _set_par(trigger, "threshup", threshold)
+    _set_par(trigger, "threshdown", max(0.0, threshold * 0.45))
+    _set_par(trigger, "triggeron", "increase")
+    _set_par(trigger, "attack", 0.02)
+    _set_par(trigger, "peaklen", 0.04)
+    _set_par(trigger, "decay", 0.12)
+    _set_par(trigger, "sustain", 0.0)
+    _set_par(trigger, "release", 0.18)
+    _set_par(trigger, "channame", name)
+
+    rename = _create(root, "renameCHOP", name + "_rename", x + 220, y - 70, (0.12, 0.22, 0.16))
+    _connect(rename, trigger)
+    _set_par(rename, "renamefrom", "*")
+    _set_par(rename, "renameto", name)
+    return rename
 
 
 def _build_control_bus(root, null_meta, null_audio):
@@ -304,19 +388,20 @@ def _build_feedback_lane(root, texture):
         -760,
     )
     memory = _create(root, "feedbackTOP", "feedback_memory", -820, -760, (0.22, 0.14, 0.18))
+    _connect(memory, root.op("album_art_in") or texture)
 
     memory_motion = _create(root, "transformTOP", "feedback_orbit", -580, -760, (0.22, 0.14, 0.18))
     _connect(memory_motion, memory)
-    _set_par(memory_motion, "sx", expr="1.003 + op('null_control')['low'][0] * 0.045")
-    _set_par(memory_motion, "sy", expr="1.003 + op('null_control')['low'][0] * 0.045")
-    _set_par(memory_motion, "rotate", expr="(op('null_control')['mid'][0] - 0.5) * 8")
-    _set_par(memory_motion, "tx", expr="(op('null_control')['artist_hash'][0] - 0.5) * 0.018")
-    _set_par(memory_motion, "ty", expr="(op('null_control')['title_hash'][0] - 0.5) * 0.018")
+    _set_par(memory_motion, "sx", expr="1.004 + op('null_spotify_meta')['progress_norm'][0] * 0.012")
+    _set_par(memory_motion, "sy", expr="1.004 + op('null_spotify_meta')['progress_norm'][0] * 0.012")
+    _set_par(memory_motion, "rotate", expr="(op('null_spotify_meta')['artist_hash'][0] - 0.5) * 7 + absTime.seconds * 0.08")
+    _set_par(memory_motion, "tx", expr="(op('null_spotify_meta')['artist_hash'][0] - 0.5) * 0.018")
+    _set_par(memory_motion, "ty", expr="(op('null_spotify_meta')['title_hash'][0] - 0.5) * 0.018")
 
     memory_decay = _create(root, "levelTOP", "feedback_decay", -340, -760, (0.22, 0.14, 0.18))
     _connect(memory_decay, memory_motion)
     _set_par(memory_decay, "opacity", expr="parent().par.Feedbackdecay")
-    _set_par(memory_decay, "brightness1", expr="0.98 + op('null_control')['kick'][0] * 0.1")
+    _set_par(memory_decay, "brightness1", 0.98)
 
     composite = _create(root, "compositeTOP", "cover_into_memory", -100, -620, (0.22, 0.14, 0.18))
     _connect(composite, memory_decay, 0)
@@ -341,7 +426,7 @@ def _build_feedback_lane(root, texture):
 
     null_visual = _create(root, "nullTOP", "null_visual", 860, -620, (0.22, 0.14, 0.18))
     _connect(null_visual, final_motion)
-    _set_par(memory, "top", null_visual.path)
+    _set_par(memory, "top", memory_decay.path)
     return null_visual
 
 

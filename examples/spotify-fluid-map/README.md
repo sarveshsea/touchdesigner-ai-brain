@@ -17,7 +17,7 @@ Run `touchdesigner/spotify_fluid_map_builder.py` inside TouchDesigner to create 
 - `/project1/spotify_fluid_map/mapper/out_projector`
 - OSC metadata input on UDP port `7000`
 - BlackHole/CoreAudio input
-- lightweight FFT audio analysis channels: `low`, `mid`, `high`, `rms`, `energy`, `kick`, `snare`
+- native TouchDesigner audio analysis channels: `low`, `mid`, `high`, `rms`, `energy`, `kick`, `snare`
 - album-art download and Movie File In TOP loading from ignored runtime artwork files
 - deterministic title/artist/album hash controls for generative variation
 - a 1920x1080 album-cover distortion, spectral-noise, and feedback-memory TOP network
@@ -48,6 +48,12 @@ Create a Multi-Output Device:
 ## 2. Start the Metadata Bridge
 
 From the repo root:
+
+```bash
+examples/spotify-fluid-map/scripts/install_bridge_launchagent_macos.sh
+```
+
+Or run it in the foreground:
 
 ```bash
 python3 examples/spotify-fluid-map/bridge/spotify_bridge.py \
@@ -81,6 +87,12 @@ Check the live local state:
 examples/spotify-fluid-map/scripts/check_runtime.sh
 ```
 
+Refresh the TouchDesigner network and report, then check runtime state:
+
+```bash
+examples/spotify-fluid-map/scripts/check_runtime.sh --refresh-td
+```
+
 ## 3. Build the TouchDesigner Network
 
 In TouchDesigner Textport:
@@ -100,7 +112,7 @@ Then:
 The builder intentionally leaves the creative patch visible at the top level of `/project1/spotify_fluid_map`:
 
 - metadata lane: OSC DAT, metadata Script CHOP, smoothed metadata controls
-- audio lane: BlackHole input, gain, FFT Script CHOP, smoothed audio controls
+- audio lane: BlackHole input, gain, Audio Spectrum CHOP, band slices, RMS, kick/snare triggers, smoothed audio controls
 - artwork lane: album cover input, cover tone, zoom/orbit, bloom
 - spectral lane: low/mid/high noise families, metadata palette ramp, cover displacement
 - feedback lane: memory feedback, orbit/decay, kick/snare flash, final drift
