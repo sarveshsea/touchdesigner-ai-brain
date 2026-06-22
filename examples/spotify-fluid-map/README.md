@@ -1,0 +1,102 @@
+# Spotify Fluid Map V1
+
+A personal/local TouchDesigner prototype that reacts to Spotify Desktop playback.
+
+V1 separates the problem into two streams:
+
+- **Metadata:** the local Spotify desktop app exposes now-playing state through AppleScript.
+- **Audio:** Spotify's actual audio is captured into TouchDesigner through a macOS loopback device such as BlackHole.
+
+This avoids Spotify's deprecated Audio Features/Audio Analysis endpoints. The visual engine analyzes the live audio signal inside TouchDesigner.
+
+## What It Builds
+
+Run `touchdesigner/spotify_fluid_map_builder.py` inside TouchDesigner to create:
+
+- `/project1/spotify_fluid_map/out1`
+- `/project1/spotify_fluid_map/mapper/out_projector`
+- OSC metadata input on UDP port `7000`
+- BlackHole/CoreAudio input
+- lightweight FFT audio analysis channels: `low`, `mid`, `high`, `rms`, `energy`, `kick`, `snare`
+- a 1920x1080 fluid feedback TOP network
+- a single flat projection mapper with grid, blackout, and corner-pin stage
+
+## 1. Install BlackHole
+
+Install [BlackHole 2ch](https://github.com/ExistentialAudio/BlackHole), then restart audio apps if macOS asks.
+
+Create a Multi-Output Device:
+
+1. Open **Audio MIDI Setup**.
+2. Press `+` and choose **Create Multi-Output Device**.
+3. Enable your speakers/headphones and **BlackHole 2ch**.
+4. Set the Multi-Output Device as the macOS sound output.
+5. In TouchDesigner, set Audio Device In to **BlackHole 2ch**.
+
+## 2. Start the Metadata Bridge
+
+From the repo root:
+
+```bash
+python3 examples/spotify-fluid-map/bridge/spotify_bridge.py \
+  --osc-host 127.0.0.1 \
+  --osc-port 7000 \
+  --poll-ms 500
+```
+
+For testing without Spotify:
+
+```bash
+python3 examples/spotify-fluid-map/bridge/spotify_bridge.py --mock
+```
+
+The bridge writes ignored runtime state to:
+
+```text
+examples/spotify-fluid-map/runtime/now_playing.json
+```
+
+## 3. Build the TouchDesigner Network
+
+In TouchDesigner Textport:
+
+```python
+exec(open('/absolute/path/to/touchdesigner-ai-brain/examples/spotify-fluid-map/touchdesigner/spotify_fluid_map_builder.py').read())
+build()
+```
+
+Then:
+
+- Set `Audiodevice` on `/project1/spotify_fluid_map` to your BlackHole input name.
+- Toggle `Showgrid` to align the projector.
+- Toggle `Blackout` for safety.
+- Use `Sensitivity` and `Brightness` to tune response.
+
+## OSC Interface
+
+The bridge sends these messages:
+
+- `/spotify/is_playing` int
+- `/spotify/progress_norm` float
+- `/spotify/position_sec` float
+- `/spotify/duration_sec` float
+- `/spotify/track_changed` int pulse
+- `/spotify/title` string
+- `/spotify/artist` string
+- `/spotify/album` string
+- `/spotify/url` string
+- `/spotify/artwork_url` string for debug only
+
+## Manual Acceptance
+
+1. Start Spotify Desktop and play a song.
+2. Start the bridge.
+3. Route Spotify audio to BlackHole.
+4. Run the TD builder.
+5. Confirm metadata reaches `spotify_meta/osc_in`.
+6. Confirm audio channels in `audio_analysis/null_audio` react.
+7. Confirm `mapper/out_projector` is 1920x1080, nonblack, and responds to `Showgrid` and `Blackout`.
+
+## Notes
+
+This is for personal experimentation. For public performance, broadcast, recording, or paid installation work, switch the audio input to a rights-cleared source such as a DJ/audio-interface feed or licensed local files.

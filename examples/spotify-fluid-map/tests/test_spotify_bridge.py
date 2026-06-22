@@ -136,6 +136,7 @@ class SpotifyBridgeTests(unittest.TestCase):
             updated_at="2026-06-22T12:00:00Z",
         )
         sender.send_state(state)
+        sender.close()
 
         thread.join()
         sock.close()

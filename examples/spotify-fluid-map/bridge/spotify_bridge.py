@@ -218,6 +218,9 @@ class OscSender:
         for path, value in messages:
             self.socket.sendto(encode_osc_message(path, value), self.address)
 
+    def close(self) -> None:
+        self.socket.close()
+
 
 def pad_osc_string(value: str) -> bytes:
     encoded = value.encode("utf-8") + b"\0"

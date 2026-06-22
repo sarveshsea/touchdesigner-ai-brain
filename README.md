@@ -92,6 +92,12 @@ cp mcp/.mcp.example.json .mcp.json
 
 Then install and enable your chosen TouchDesigner MCP bridge. The current recommendation is [Embody / Envoy](https://github.com/dylanroscover/Embody) as the primary live-control layer, with [8beeeaaat/touchdesigner-mcp](https://github.com/8beeeaaat/touchdesigner-mcp) as a simpler WebServer DAT backup.
 
+## First Example
+
+[Spotify Fluid Map V1](examples/spotify-fluid-map) is the first public example in this repo. It uses Spotify Desktop for now-playing metadata, BlackHole for system-audio loopback into TouchDesigner, and a TD Python builder for a 1920x1080 fluid feedback projection mapper.
+
+It is intentionally a personal/local prototype. For public performance or recorded work, swap the audio source to a rights-cleared local file, DJ feed, or audio-interface input.
+
 ## Starter Network Scaffold
 
 The first script in `touchdesigner/brain_vj_builder.py` creates a top-level `brain_vj` COMP with subsystem shells:

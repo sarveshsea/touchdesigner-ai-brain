@@ -110,3 +110,10 @@ Build a reusable `/project1/brain_vj` COMP with:
 - `monitor` - probe/TD Synapse hooks.
 - `safety` - blackout, freeze, bypass, show FPS, emergency reset.
 
+## First Example: Spotify Fluid Map
+
+The first concrete example is `examples/spotify-fluid-map`. It keeps Spotify metadata and audio analysis separate:
+
+- Spotify Desktop metadata arrives over OSC from a local Python bridge.
+- Audio-reactive channels are calculated from BlackHole/CoreAudio input inside TouchDesigner.
+- The mapper targets a 1920x1080 single flat output with grid, freeze, and blackout controls.

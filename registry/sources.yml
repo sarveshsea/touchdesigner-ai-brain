@@ -1,6 +1,12 @@
 generated: "2026-06-22"
 local_touchdesigner_version: "2023.11600"
 sources:
+  - id: spotify-fluid-map-v1
+    name: Spotify Fluid Map V1
+    type: local-example
+    url: examples/spotify-fluid-map
+    priority: example
+    notes: Local Spotify Desktop metadata bridge plus BlackHole audio loopback into TouchDesigner.
   - id: embody-envoy
     name: Embody / Envoy
     type: mcp-live-build
@@ -61,4 +67,3 @@ sources:
     url: https://derivative.ca/community-post/asset/touchdesigner-fulldome-simulator-tox-beta/72740
     priority: candidate
     notes: Dome projection preview; TD 2022 origin, later versions not fully tested.
-
