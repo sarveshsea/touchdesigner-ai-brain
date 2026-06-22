@@ -29,6 +29,14 @@ TouchDesigner Non-Commercial clamps output resolution. The builder sets the proj
 
 Install [BlackHole 2ch](https://github.com/ExistentialAudio/BlackHole), then restart audio apps if macOS asks.
 
+From the repo root:
+
+```bash
+examples/spotify-fluid-map/scripts/setup_blackhole_macos.sh
+```
+
+The script uses Homebrew's `blackhole-2ch` cask and verifies whether CoreAudio can see the device. macOS will ask for your admin password because BlackHole installs a HAL audio driver under `/Library/Audio/Plug-Ins/HAL`.
+
 Create a Multi-Output Device:
 
 1. Open **Audio MIDI Setup**.
@@ -65,6 +73,12 @@ It also downloads current album artwork to ignored local files:
 ```text
 examples/spotify-fluid-map/runtime/album_art.jpg
 examples/spotify-fluid-map/runtime/artwork/*.jpg
+```
+
+Check the live local state:
+
+```bash
+examples/spotify-fluid-map/scripts/check_runtime.sh
 ```
 
 ## 3. Build the TouchDesigner Network
@@ -117,9 +131,10 @@ The bridge sends these messages:
 2. Start the bridge.
 3. Route Spotify audio to BlackHole.
 4. Run the TD builder.
-5. Confirm metadata reaches `spotify_meta/osc_in`.
-6. Confirm audio channels in `audio_analysis/null_audio` react.
-7. Confirm `mapper/out_projector` is 1920x1080, nonblack, and responds to `Showgrid` and `Blackout`.
+5. Confirm metadata reaches `/project1/spotify_fluid_map/spotify_osc`.
+6. Confirm audio channels in `/project1/spotify_fluid_map/null_audio_analysis` react.
+7. Confirm `/project1/spotify_fluid_map/mapper/out_projector` is nonblack and responds to `Showgrid` and `Blackout`.
+8. On TouchDesigner licenses that support HD output, confirm the projector chain cooks at 1920x1080. Non-Commercial sessions may clamp to 1280-wide.
 
 ## Notes
 
