@@ -11,15 +11,19 @@ This avoids Spotify's deprecated Audio Features/Audio Analysis endpoints. The vi
 
 ## What It Builds
 
-Run `touchdesigner/spotify_fluid_map_builder.py` inside TouchDesigner to create:
+Run `touchdesigner/spotify_fluid_map_builder.py` inside TouchDesigner to create a visible VJ-style patch:
 
 - `/project1/spotify_fluid_map/out1`
 - `/project1/spotify_fluid_map/mapper/out_projector`
 - OSC metadata input on UDP port `7000`
 - BlackHole/CoreAudio input
 - lightweight FFT audio analysis channels: `low`, `mid`, `high`, `rms`, `energy`, `kick`, `snare`
-- a 1920x1080 fluid feedback TOP network
+- album-art download and Movie File In TOP loading from ignored runtime artwork files
+- deterministic title/artist/album hash controls for generative variation
+- a 1920x1080 album-cover distortion, spectral-noise, and feedback-memory TOP network
 - a single flat projection mapper with grid, blackout, and corner-pin stage
+
+TouchDesigner Non-Commercial clamps output resolution. The builder sets the projection network to 1920x1080, but a Non-Commercial session may cook at 1280-wide until the project runs under a license that permits 1920x1080 output.
 
 ## 1. Install BlackHole
 
@@ -56,6 +60,13 @@ The bridge writes ignored runtime state to:
 examples/spotify-fluid-map/runtime/now_playing.json
 ```
 
+It also downloads current album artwork to ignored local files:
+
+```text
+examples/spotify-fluid-map/runtime/album_art.jpg
+examples/spotify-fluid-map/runtime/artwork/*.jpg
+```
+
 ## 3. Build the TouchDesigner Network
 
 In TouchDesigner Textport:
@@ -70,7 +81,16 @@ Then:
 - Set `Audiodevice` on `/project1/spotify_fluid_map` to your BlackHole input name.
 - Toggle `Showgrid` to align the projector.
 - Toggle `Blackout` for safety.
-- Use `Sensitivity` and `Brightness` to tune response.
+- Use `Sensitivity`, `Brightness`, `Visualintensity`, `Coverweight`, `Feedbackdecay`, and `Grain` to tune response.
+
+The builder intentionally leaves the creative patch visible at the top level of `/project1/spotify_fluid_map`:
+
+- metadata lane: OSC DAT, metadata Script CHOP, smoothed metadata controls
+- audio lane: BlackHole input, gain, FFT Script CHOP, smoothed audio controls
+- artwork lane: album cover input, cover tone, zoom/orbit, bloom
+- spectral lane: low/mid/high noise families, metadata palette ramp, cover displacement
+- feedback lane: memory feedback, orbit/decay, kick/snare flash, final drift
+- mapper lane: corner pin, freeze, alignment grid, blackout, final output
 
 ## OSC Interface
 
@@ -85,7 +105,11 @@ The bridge sends these messages:
 - `/spotify/artist` string
 - `/spotify/album` string
 - `/spotify/url` string
-- `/spotify/artwork_url` string for debug only
+- `/spotify/artwork_url` string
+- `/spotify/artwork_path` string
+- `/spotify/title_hash` float
+- `/spotify/artist_hash` float
+- `/spotify/album_hash` float
 
 ## Manual Acceptance
 

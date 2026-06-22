@@ -7,6 +7,7 @@ import threading
 import time
 import unittest
 from pathlib import Path
+from unittest import mock
 
 
 MODULE_PATH = Path(__file__).resolve().parents[1] / "bridge" / "spotify_bridge.py"
@@ -49,6 +50,9 @@ class SpotifyBridgeTests(unittest.TestCase):
         self.assertAlmostEqual(state.progress_norm, 42.5 / 390.0)
         self.assertEqual(state.track_changed, 1)
         self.assertEqual(state.track_id, "https://open.spotify.com/track/example")
+        self.assertGreater(state.title_hash, 0)
+        self.assertGreater(state.artist_hash, 0)
+        self.assertGreater(state.album_hash, 0)
 
     def test_parse_spotify_applescript_duration_milliseconds(self):
         payload = "\n".join(
@@ -69,6 +73,43 @@ class SpotifyBridgeTests(unittest.TestCase):
         self.assertFalse(state.is_playing)
         self.assertEqual(state.duration_sec, 195.0)
         self.assertAlmostEqual(state.progress_norm, 3.9 / 195.0)
+
+    def test_artwork_cache_downloads_artwork_and_sets_path(self):
+        class FakeResponse:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_args):
+                return False
+
+            def read(self):
+                return b"image-bytes"
+
+        state = self.bridge.TrackState.from_applescript_payload(
+            "\n".join(
+                [
+                    "state=playing",
+                    "title=Track",
+                    "artist=Artist",
+                    "album=Album",
+                    "duration=100000",
+                    "position=10",
+                    "url=spotify:track:test",
+                    "artwork_url=https://i.scdn.co/image/test",
+                ]
+            ),
+            previous_track_id=None,
+        )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp) / "album_art.jpg"
+            cache = self.bridge.ArtworkCache(output)
+            with mock.patch.object(self.bridge.urllib.request, "urlopen", return_value=FakeResponse()):
+                updated = cache.update(state)
+
+            self.assertTrue(updated.artwork_path.endswith(".jpg"))
+            self.assertEqual(Path(updated.artwork_path).read_bytes(), b"image-bytes")
+            self.assertEqual(output.read_bytes(), b"image-bytes")
 
     def test_parse_stopped_payload_uses_safe_defaults(self):
         state = self.bridge.TrackState.from_applescript_payload(
@@ -104,6 +145,10 @@ class SpotifyBridgeTests(unittest.TestCase):
             track_changed=1,
             url="https://open.spotify.com/track/test",
             artwork_url="https://i.scdn.co/image/test",
+            artwork_path="/tmp/album_art.jpg",
+            title_hash=0.1,
+            artist_hash=0.2,
+            album_hash=0.3,
             track_id="https://open.spotify.com/track/test",
             updated_at="2026-06-22T12:00:00Z",
         )
@@ -116,6 +161,7 @@ class SpotifyBridgeTests(unittest.TestCase):
         self.assertEqual(data["title"], "Test Title")
         self.assertEqual(data["artist"], "Test Artist")
         self.assertEqual(data["progress_norm"], 0.25)
+        self.assertEqual(data["artwork_path"], "/tmp/album_art.jpg")
 
     def test_osc_sender_emits_expected_paths(self):
         received = []
@@ -129,7 +175,7 @@ class SpotifyBridgeTests(unittest.TestCase):
         def receive_packets():
             ready.set()
             deadline = time.time() + 2.0
-            while time.time() < deadline and len(received) < 10:
+            while time.time() < deadline and len(received) < 14:
                 try:
                     data, _addr = sock.recvfrom(2048)
                 except socket.timeout:
@@ -152,6 +198,10 @@ class SpotifyBridgeTests(unittest.TestCase):
             track_changed=1,
             url="spotify-url",
             artwork_url="artwork-url",
+            artwork_path="/tmp/art.jpg",
+            title_hash=0.1,
+            artist_hash=0.2,
+            album_hash=0.3,
             track_id="spotify-url",
             updated_at="2026-06-22T12:00:00Z",
         )
@@ -165,6 +215,7 @@ class SpotifyBridgeTests(unittest.TestCase):
         self.assertIn(b"/spotify/is_playing", decoded)
         self.assertIn(b"/spotify/title", decoded)
         self.assertIn(b"/spotify/progress_norm", decoded)
+        self.assertIn(b"/spotify/artwork_path", decoded)
 
 
 if __name__ == "__main__":

@@ -11,10 +11,24 @@ The resulting public contract is:
     /project1/spotify_fluid_map/mapper/out_projector
 """
 
+from pathlib import Path
+
+
 ROOT_NAME = "spotify_fluid_map"
 OSC_PORT = 7000
 WIDTH = 1920
 HEIGHT = 1080
+
+
+def _infer_example_dir():
+    script_file = globals().get("__file__")
+    if script_file:
+        return Path(script_file).resolve().parents[1]
+    return Path.cwd() / "examples" / "spotify-fluid-map"
+
+
+EXAMPLE_DIR = _infer_example_dir()
+DEFAULT_ARTWORK_PATH = EXAMPLE_DIR / "runtime" / "album_art.jpg"
 
 
 def _destroy_existing(parent, name):
@@ -29,7 +43,26 @@ def _create(parent, op_type, name, x=0, y=0, color=None):
     node.nodeY = y
     if color is not None:
         node.color = color
+    if str(op_type).endswith("TOP"):
+        for par_name, value in (
+            ("outputresolution", "custom"),
+            ("resolutionw", WIDTH),
+            ("resolutionh", HEIGHT),
+            ("resmult", False),
+        ):
+            par = getattr(node.par, par_name, None)
+            if par is not None:
+                par.val = value
     return node
+
+
+def _make_label(parent, name, text, x, y):
+    dat = _create(parent, "textDAT", name, x, y)
+    dat.text = text
+    dat.viewer = True
+    dat.nodeWidth = 220
+    dat.nodeHeight = 80
+    return dat
 
 
 def _set_par(node, name, value=None, expr=None):
@@ -47,6 +80,7 @@ def _set_top_resolution(node, width=WIDTH, height=HEIGHT):
     _set_par(node, "outputresolution", "custom")
     _set_par(node, "resolutionw", width)
     _set_par(node, "resolutionh", height)
+    _set_par(node, "resmult", False)
 
 
 def _connect(dst, src, index=0):
@@ -60,7 +94,7 @@ def _connect(dst, src, index=0):
 
 
 def _append_controls(root):
-    page = root.appendCustomPage("Controls")
+    page = root.appendCustomPage("Performance")
     page.appendToggle("Blackout", label="Blackout")[0].default = False
     page.appendToggle("Freeze", label="Freeze")[0].default = False
     page.appendToggle("Showgrid", label="Show Grid")[0].default = False
@@ -68,155 +102,266 @@ def _append_controls(root):
     page.appendStr("Audiodevice", label="Audio Device")[0].default = "BlackHole 2ch"
     page.appendFloat("Sensitivity", label="Sensitivity")[0].default = 1.0
     page.appendFloat("Brightness", label="Brightness")[0].default = 1.0
+    page.appendFloat("Visualintensity", label="Visual Intensity")[0].default = 1.0
+    page.appendFloat("Coverweight", label="Cover Weight")[0].default = 0.72
+    page.appendFloat("Feedbackdecay", label="Feedback Decay")[0].default = 0.94
+    page.appendFloat("Grain", label="Grain")[0].default = 0.28
 
 
-def _make_text(parent, name, text, x=0, y=0):
-    dat = _create(parent, "textDAT", name, x, y)
-    dat.text = text
-    return dat
+def _osc_string_expr(path, fallback):
+    safe_fallback = str(fallback).replace("\\", "\\\\").replace("'", "\\'")
+    safe_path = path.replace("'", "\\'")
+    return (
+        "next((r[1].val for r in op('spotify_osc').rows() "
+        f"if len(r) > 1 and r[0].val == '{safe_path}'), "
+        f"r'{safe_fallback}') or r'{safe_fallback}'"
+    )
 
 
-def _build_spotify_meta(root):
-    comp = _create(root, "baseCOMP", "spotify_meta", -900, 350, (0.18, 0.15, 0.22))
-    comp.comment = "OSC metadata from bridge/spotify_bridge.py on UDP port 7000."
-
-    osc = _create(comp, "oscinDAT", "osc_in", -200, 100)
+def _build_metadata_lane(root):
+    _make_label(
+        root,
+        "label_01_metadata",
+        "01 SPOTIFY METADATA\nOSC on :7000 -> numeric controls + artwork path",
+        -1100,
+        500,
+    )
+    osc = _create(root, "oscinDAT", "spotify_osc", -820, 520, (0.18, 0.15, 0.22))
     _set_par(osc, "port", OSC_PORT)
     _set_par(osc, "active", True)
 
-    callbacks = _make_text(comp, "metadata_script", METADATA_SCRIPT, 50, 100)
-    meta_chop = _create(comp, "scriptCHOP", "metadata_chop", 300, 100)
-    _set_par(meta_chop, "callbacks", callbacks.path)
-    null_meta = _create(comp, "nullCHOP", "null_meta", 520, 100)
-    _connect(null_meta, meta_chop)
+    script = _create(root, "textDAT", "metadata_to_controls_script", -560, 520)
+    script.text = METADATA_SCRIPT
+    meta = _create(root, "scriptCHOP", "spotify_meta_chop", -300, 520, (0.18, 0.15, 0.22))
+    _set_par(meta, "callbacks", script.path)
 
-    notes = _make_text(
-        comp,
-        "README",
-        "Receives all /spotify/* OSC messages. Numeric state is exposed through null_meta.\n"
-        "String metadata remains visible in osc_in and runtime/now_playing.json.",
-        -200,
-        -120,
+    smooth = _create(root, "filterCHOP", "metadata_smooth", -80, 520, (0.18, 0.15, 0.22))
+    _connect(smooth, meta)
+    _set_par(smooth, "width", 0.08)
+
+    null_meta = _create(root, "nullCHOP", "null_spotify_meta", 150, 520, (0.18, 0.15, 0.22))
+    _connect(null_meta, smooth)
+    return null_meta
+
+
+def _build_audio_lane(root):
+    _make_label(
+        root,
+        "label_02_audio",
+        "02 BLACKHOLE AUDIO\nAudio Device In -> FFT bands, pulses, smoothed energy",
+        -1100,
+        260,
     )
-    notes.viewer = True
-    return comp
-
-
-def _build_audio(root):
-    comp = _create(root, "baseCOMP", "audio_in", -900, 50, (0.12, 0.18, 0.22))
-    comp.comment = "Set system output to a Multi-Output Device including BlackHole, then select BlackHole here."
-
-    audio = _create(comp, "audiodeviceinCHOP", "audio_device_in", -250, 100)
+    audio = _create(root, "audiodeviceinCHOP", "audio_device_in", -820, 280, (0.12, 0.18, 0.22))
     _set_par(audio, "driver", "default")
-    _set_par(audio, "device", expr="parent(2).par.Audiodevice")
+    _set_par(audio, "device", expr="parent().par.Audiodevice")
     _set_par(audio, "active", True)
 
-    gain = _create(comp, "mathCHOP", "input_gain", -40, 100)
+    gain = _create(root, "mathCHOP", "audio_gain", -600, 280, (0.12, 0.18, 0.22))
     _connect(gain, audio)
-    _set_par(gain, "multiply", expr="parent(2).par.Sensitivity")
+    _set_par(gain, "gain", expr="parent().par.Sensitivity")
 
-    null_audio = _create(comp, "nullCHOP", "null_audio", 180, 100)
-    _connect(null_audio, gain)
-    return comp
+    script = _create(root, "textDAT", "audio_analysis_script", -600, 100)
+    script.text = AUDIO_ANALYSIS_SCRIPT
 
+    analysis = _create(root, "scriptCHOP", "audio_analysis_chop", -360, 280, (0.12, 0.22, 0.16))
+    _connect(analysis, gain)
+    _set_par(analysis, "callbacks", script.path)
 
-def _build_audio_analysis(root):
-    comp = _create(root, "baseCOMP", "audio_analysis", -550, 50, (0.12, 0.22, 0.16))
-    comp.comment = "Script CHOP performs lightweight FFT bands from Audio Device In."
-
-    callbacks = _make_text(comp, "audio_analysis_script", AUDIO_ANALYSIS_SCRIPT, -200, 120)
-    analysis = _create(comp, "scriptCHOP", "analysis_chop", 80, 120)
-    _set_par(analysis, "callbacks", callbacks.path)
-    audio_source = root.op("audio_in/null_audio")
-    if audio_source:
-        _connect(analysis, audio_source)
-
-    smooth = _create(comp, "filterCHOP", "smooth", 300, 120)
+    smooth = _create(root, "filterCHOP", "audio_smooth", -120, 280, (0.12, 0.22, 0.16))
     _connect(smooth, analysis)
     _set_par(smooth, "width", 0.12)
 
-    null_audio = _create(comp, "nullCHOP", "null_audio", 520, 120)
+    null_audio = _create(root, "nullCHOP", "null_audio_analysis", 140, 280, (0.12, 0.22, 0.16))
     _connect(null_audio, smooth)
-    return comp
+    return null_audio
 
 
-def _build_control_bus(root):
-    comp = _create(root, "baseCOMP", "control_bus", -210, 50, (0.18, 0.18, 0.12))
-    comp.comment = "Merged numeric controls used by the visual network."
+def _build_control_bus(root, null_meta, null_audio):
+    _make_label(
+        root,
+        "label_03_control",
+        "03 CONTROL BUS\nmetadata hashes + progress + audio bands",
+        370,
+        390,
+    )
+    merge = _create(root, "mergeCHOP", "merge_control_signals", 400, 280, (0.18, 0.18, 0.12))
+    _connect(merge, null_audio, 0)
+    _connect(merge, null_meta, 1)
 
-    merge = _create(comp, "mergeCHOP", "merge_controls", -100, 100)
-    audio = root.op("audio_analysis/null_audio")
-    meta = root.op("spotify_meta/null_meta")
-    if audio:
-        _connect(merge, audio, 0)
-    if meta:
-        _connect(merge, meta, 1)
-    null_control = _create(comp, "nullCHOP", "null_control", 140, 100)
+    null_control = _create(root, "nullCHOP", "null_control", 650, 280, (0.18, 0.18, 0.12))
     _connect(null_control, merge)
-    return comp
+    return null_control
 
 
-def _build_visual(root):
-    comp = _create(root, "baseCOMP", "fluid_feedback", 150, 120, (0.22, 0.14, 0.18))
-    comp.comment = "Fluid-ish feedback TOP chain driven by control_bus/null_control."
+def _build_artwork_lane(root):
+    _make_label(
+        root,
+        "label_04_artwork",
+        "04 ALBUM ART ENGINE\ncover file -> zoom, smear, warp, color memory",
+        -1100,
+        20,
+    )
+    art = _create(root, "moviefileinTOP", "album_art_in", -820, 40, (0.20, 0.16, 0.12))
+    _set_top_resolution(art)
+    _set_par(art, "file", expr=_osc_string_expr("/spotify/artwork_path", DEFAULT_ARTWORK_PATH))
+    _set_par(art, "play", True)
 
-    ramp = _create(comp, "rampTOP", "palette_ramp", -500, 260)
-    _set_top_resolution(ramp)
+    art_level = _create(root, "levelTOP", "album_art_tone", -580, 40, (0.20, 0.16, 0.12))
+    _connect(art_level, art)
+    _set_par(art_level, "brightness1", expr="0.75 + op('null_control')['energy'][0] * 0.35")
+    _set_par(art_level, "contrast", expr="1.05 + op('null_control')['mid'][0] * 0.45")
+    _set_par(art_level, "opacity", expr="parent().par.Coverweight")
 
-    noise = _create(comp, "noiseTOP", "driver_noise", -500, 60)
-    _set_top_resolution(noise)
-    _set_par(noise, "period", expr="2.0 - op('../control_bus/null_control')['low'][0] * 1.25")
-    _set_par(noise, "offsetx", expr="absTime.seconds * (0.04 + op('../control_bus/null_control')['mid'][0] * 0.12)")
-    _set_par(noise, "offsety", expr="absTime.seconds * (0.03 + op('../control_bus/null_control')['high'][0] * 0.10)")
-    _set_par(noise, "seed", expr="int(op('../control_bus/null_control')['track_seed'][0])")
+    art_zoom = _create(root, "transformTOP", "album_art_zoom_orbit", -340, 40, (0.20, 0.16, 0.12))
+    _connect(art_zoom, art_level)
+    _set_par(art_zoom, "sx", expr="1.0 + op('null_control')['low'][0] * 0.22")
+    _set_par(art_zoom, "sy", expr="1.0 + op('null_control')['low'][0] * 0.22")
+    _set_par(
+        art_zoom,
+        "rotate",
+        expr="(op('null_control')['artist_hash'][0] - 0.5) * 18 + op('null_control')['progress_norm'][0] * 12",
+    )
+    _set_par(art_zoom, "tx", expr="(op('null_control')['title_hash'][0] - 0.5) * 0.12")
+    _set_par(art_zoom, "ty", expr="(op('null_control')['album_hash'][0] - 0.5) * 0.12")
 
-    feedback = _create(comp, "feedbackTOP", "feedback", -250, 40)
-    transform = _create(comp, "transformTOP", "feedback_motion", 0, 40)
-    _connect(transform, feedback)
-    _set_par(transform, "scale", expr="1.002 + op('../control_bus/null_control')['low'][0] * 0.035")
-    _set_par(transform, "rotate", expr="op('../control_bus/null_control')['mid'][0] * 7")
+    art_soft = _create(root, "blurTOP", "album_art_soft_bloom", -100, 40, (0.20, 0.16, 0.12))
+    _connect(art_soft, art_zoom)
+    _set_par(art_soft, "size", expr="1.0 + op('null_control')['rms'][0] * 10")
 
-    composite = _create(comp, "compositeTOP", "blend_noise", 250, 140)
-    _connect(composite, transform, 0)
-    _connect(composite, noise, 1)
+    null_art = _create(root, "nullTOP", "null_album_art_engine", 140, 40, (0.20, 0.16, 0.12))
+    _connect(null_art, art_soft)
+    return null_art
+
+
+def _build_spectral_texture_lane(root):
+    _make_label(
+        root,
+        "label_05_spectral",
+        "05 SPECTRAL TEXTURE\nlow/mid/high drive noise families and palette movement",
+        -1100,
+        -220,
+    )
+    low_noise = _create(root, "noiseTOP", "low_flow_noise", -820, -160, (0.12, 0.20, 0.18))
+    _set_top_resolution(low_noise)
+    _set_par(low_noise, "period", expr="1.8 - op('null_control')['low'][0] * 1.1")
+    _set_par(low_noise, "tx", expr="absTime.seconds * (0.04 + op('null_control')['low'][0] * 0.18)")
+    _set_par(low_noise, "ty", expr="op('null_control')['progress_norm'][0] * 2.0")
+    _set_par(low_noise, "seed", expr="int(op('null_control')['track_seed'][0] * 11 + op('null_control')['artist_hash'][0] * 900)")
+
+    mid_noise = _create(root, "noiseTOP", "mid_thread_noise", -820, -360, (0.12, 0.20, 0.18))
+    _set_top_resolution(mid_noise)
+    _set_par(mid_noise, "period", expr="0.9 + op('null_control')['mid'][0] * 0.65")
+    _set_par(mid_noise, "tx", expr="absTime.seconds * (0.12 + op('null_control')['mid'][0] * 0.22)")
+    _set_par(mid_noise, "ty", expr="absTime.seconds * -0.08")
+    _set_par(mid_noise, "seed", expr="int(op('null_control')['track_seed'][0] * 17 + op('null_control')['title_hash'][0] * 1200)")
+
+    high_noise = _create(root, "noiseTOP", "high_grain_noise", -820, -560, (0.12, 0.20, 0.18))
+    _set_top_resolution(high_noise)
+    _set_par(high_noise, "period", expr="0.28 + parent().par.Grain")
+    _set_par(high_noise, "tx", expr="absTime.seconds * (0.28 + op('null_control')['high'][0] * 0.8)")
+    _set_par(high_noise, "seed", expr="int(op('null_control')['track_seed'][0] * 23 + op('null_control')['album_hash'][0] * 1600)")
+
+    palette = _create(root, "rampTOP", "metadata_palette_ramp", -560, -560, (0.16, 0.12, 0.20))
+    _set_top_resolution(palette)
+    _set_par(palette, "phase", expr="op('null_control')['progress_norm'][0] + op('null_control')['artist_hash'][0]")
+
+    low_warp = _create(root, "displaceTOP", "cover_low_displace", -560, -120, (0.12, 0.20, 0.18))
+    _connect(low_warp, root.op("null_album_art_engine"), 0)
+    _connect(low_warp, low_noise, 1)
+    _set_par(low_warp, "displaceweightx", expr="0.04 + op('null_control')['low'][0] * 0.42")
+    _set_par(low_warp, "displaceweighty", expr="0.04 + op('null_control')['low'][0] * 0.42")
+
+    mid_warp = _create(root, "displaceTOP", "cover_mid_shear", -320, -180, (0.12, 0.20, 0.18))
+    _connect(mid_warp, low_warp, 0)
+    _connect(mid_warp, mid_noise, 1)
+    _set_par(mid_warp, "displaceweightx", expr="0.025 + op('null_control')['mid'][0] * 0.25")
+    _set_par(mid_warp, "displaceweighty", expr="0.025 + op('null_control')['mid'][0] * 0.25")
+
+    grain_blend = _create(root, "compositeTOP", "grain_over_cover", -80, -260, (0.12, 0.20, 0.18))
+    _connect(grain_blend, mid_warp, 0)
+    _connect(grain_blend, high_noise, 1)
+    _set_par(grain_blend, "operand", "add")
+
+    palette_blend = _create(root, "compositeTOP", "palette_over_cover", 160, -260, (0.16, 0.12, 0.20))
+    _connect(palette_blend, grain_blend, 0)
+    _connect(palette_blend, palette, 1)
+    _set_par(palette_blend, "operand", "screen")
+
+    null_texture = _create(root, "nullTOP", "null_spectral_texture", 420, -260, (0.16, 0.12, 0.20))
+    _connect(null_texture, palette_blend)
+    return null_texture
+
+
+def _build_feedback_lane(root, texture):
+    _make_label(
+        root,
+        "label_06_feedback",
+        "06 FLUID MEMORY\nfeedback, orbit, bloom, kick/snare flashes",
+        -1100,
+        -760,
+    )
+    memory = _create(root, "feedbackTOP", "feedback_memory", -820, -760, (0.22, 0.14, 0.18))
+
+    memory_motion = _create(root, "transformTOP", "feedback_orbit", -580, -760, (0.22, 0.14, 0.18))
+    _connect(memory_motion, memory)
+    _set_par(memory_motion, "sx", expr="1.003 + op('null_control')['low'][0] * 0.045")
+    _set_par(memory_motion, "sy", expr="1.003 + op('null_control')['low'][0] * 0.045")
+    _set_par(memory_motion, "rotate", expr="(op('null_control')['mid'][0] - 0.5) * 8")
+    _set_par(memory_motion, "tx", expr="(op('null_control')['artist_hash'][0] - 0.5) * 0.018")
+    _set_par(memory_motion, "ty", expr="(op('null_control')['title_hash'][0] - 0.5) * 0.018")
+
+    memory_decay = _create(root, "levelTOP", "feedback_decay", -340, -760, (0.22, 0.14, 0.18))
+    _connect(memory_decay, memory_motion)
+    _set_par(memory_decay, "opacity", expr="parent().par.Feedbackdecay")
+    _set_par(memory_decay, "brightness1", expr="0.98 + op('null_control')['kick'][0] * 0.1")
+
+    composite = _create(root, "compositeTOP", "cover_into_memory", -100, -620, (0.22, 0.14, 0.18))
+    _connect(composite, memory_decay, 0)
+    _connect(composite, texture, 1)
     _set_par(composite, "operand", "add")
 
-    blur = _create(comp, "blurTOP", "soften", 480, 140)
-    _connect(blur, composite)
-    _set_par(blur, "filter", expr="1 + op('../control_bus/null_control')['energy'][0] * 6")
+    bloom = _create(root, "blurTOP", "energy_bloom", 140, -620, (0.22, 0.14, 0.18))
+    _connect(bloom, composite)
+    _set_par(bloom, "size", expr="1.0 + op('null_control')['energy'][0] * 12")
 
-    level = _create(comp, "levelTOP", "audio_level", 720, 140)
-    _connect(level, blur)
-    _set_par(level, "brightness1", expr="parent(2).par.Brightness + op('../control_bus/null_control')['kick'][0] * 0.18")
-    _set_par(level, "gamma1", expr="1.0 - op('../control_bus/null_control')['high'][0] * 0.15")
-    _set_par(level, "opacity", expr="0.92 + op('../control_bus/null_control')['snare'][0] * 0.08")
+    flash = _create(root, "levelTOP", "kick_snare_flash", 380, -620, (0.22, 0.14, 0.18))
+    _connect(flash, bloom)
+    _set_par(flash, "brightness1", expr="parent().par.Brightness + op('null_control')['kick'][0] * 0.4")
+    _set_par(flash, "contrast", expr="1.0 + op('null_control')['snare'][0] * 0.55")
+    _set_par(flash, "opacity", expr="0.9 + parent().par.Visualintensity * 0.1")
 
-    out = _create(comp, "nullTOP", "out_visual", 960, 140)
-    _connect(out, level)
+    final_motion = _create(root, "transformTOP", "final_micro_drift", 620, -620, (0.22, 0.14, 0.18))
+    _connect(final_motion, flash)
+    _set_par(final_motion, "sx", expr="1.0 + op('null_control')['rms'][0] * 0.018")
+    _set_par(final_motion, "sy", expr="1.0 + op('null_control')['rms'][0] * 0.018")
+    _set_par(final_motion, "rotate", expr="op('null_control')['progress_norm'][0] * 3")
 
-    _set_par(feedback, "targettop", out.path)
-    _make_text(comp, "README", VISUAL_NOTES, -500, -160)
-    return comp
+    null_visual = _create(root, "nullTOP", "null_visual", 860, -620, (0.22, 0.14, 0.18))
+    _connect(null_visual, final_motion)
+    _set_par(memory, "top", null_visual.path)
+    return null_visual
 
 
-def _build_mapper(root):
-    mapper = _create(root, "baseCOMP", "mapper", 560, 120, (0.14, 0.16, 0.24))
-    mapper.comment = "Single flat projection output. Use Show Grid for setup and Blackout for safety."
+def _build_visible_mapper_lane(root, visual):
+    _make_label(
+        root,
+        "label_07_mapper",
+        "07 PROJECTOR SAFETY\ncorner pin, freeze, grid, blackout, final output",
+        -1100,
+        -1020,
+    )
+    corner = _create(root, "cornerpinTOP", "corner_pin_projector", -820, -1040, (0.14, 0.16, 0.24))
+    _connect(corner, visual)
 
-    visual_in = _create(mapper, "selectTOP", "visual_in", -560, 160)
-    _set_par(visual_in, "top", "../fluid_feedback/out_visual")
-
-    corner = _create(mapper, "cornerpinTOP", "corner_pin", -340, 160)
-    _connect(corner, visual_in)
-
-    freeze_feedback = _create(mapper, "feedbackTOP", "freeze_feedback", -340, -40)
-    freeze_switch = _create(mapper, "switchTOP", "freeze_switch", -80, 120)
+    freeze_feedback = _create(root, "feedbackTOP", "freeze_buffer", -580, -1220, (0.14, 0.16, 0.24))
+    freeze_switch = _create(root, "switchTOP", "freeze_switch", -580, -1040, (0.14, 0.16, 0.24))
     _connect(freeze_switch, corner, 0)
     _connect(freeze_switch, freeze_feedback, 1)
-    _set_par(freeze_switch, "index", expr="1 if parent(2).par.Freeze else 0")
-    _set_par(freeze_feedback, "targettop", freeze_switch.path)
+    _set_par(freeze_switch, "index", expr="1 if parent().par.Freeze else 0")
+    _set_par(freeze_feedback, "top", freeze_switch.path)
 
-    grid_cell = _create(mapper, "rectangleTOP", "grid_cell", -560, -240)
+    grid_cell = _create(root, "rectangleTOP", "mapper_grid_cell", -820, -1440, (0.14, 0.16, 0.24))
     _set_top_resolution(grid_cell, 160, 90)
     _set_par(grid_cell, "sizeunit", "fraction")
     _set_par(grid_cell, "sizex", 1.0)
@@ -230,71 +375,70 @@ def _build_mapper(root):
     _set_par(grid_cell, "bgcolorg", 0.02)
     _set_par(grid_cell, "bgcolorb", 0.02)
 
-    grid = _create(mapper, "tileTOP", "test_grid", -340, -240)
+    grid = _create(root, "tileTOP", "mapper_alignment_grid", -580, -1440, (0.14, 0.16, 0.24))
     _connect(grid, grid_cell)
     _set_top_resolution(grid)
     _set_par(grid, "repeatx", 12)
     _set_par(grid, "repeaty", 12)
 
-    blackout = _create(mapper, "constantTOP", "blackout", -340, -440)
+    blackout = _create(root, "constantTOP", "blackout_black", -580, -1640, (0.14, 0.16, 0.24))
     _set_top_resolution(blackout)
     _set_par(blackout, "colorr", 0)
     _set_par(blackout, "colorg", 0)
     _set_par(blackout, "colorb", 0)
 
-    switch = _create(mapper, "switchTOP", "safety_switch", 180, 80)
-    _connect(switch, freeze_switch, 0)
-    _connect(switch, blackout, 1)
-    _connect(switch, grid, 2)
-    _set_par(
-        switch,
-        "index",
-        expr="2 if parent(2).par.Showgrid else (1 if parent(2).par.Blackout else 0)",
-    )
+    safety = _create(root, "switchTOP", "safety_switch", -320, -1040, (0.14, 0.16, 0.24))
+    _connect(safety, freeze_switch, 0)
+    _connect(safety, blackout, 1)
+    _connect(safety, grid, 2)
+    _set_par(safety, "index", expr="2 if parent().par.Showgrid else (1 if parent().par.Blackout else 0)")
 
-    out_projector = _create(mapper, "outTOP", "out_projector", 420, 80)
-    _connect(out_projector, switch)
+    projector = _create(root, "nullTOP", "null_projector", -80, -1040, (0.14, 0.16, 0.24))
+    _connect(projector, safety)
 
-    root_out = _create(root, "outTOP", "out1", 900, 120)
-    _connect(root_out, out_projector)
-    return mapper
+    root_out = _create(root, "outTOP", "out1", 160, -1040, (0.14, 0.16, 0.24))
+    _connect(root_out, projector)
+
+    mapper = _create(root, "baseCOMP", "mapper", 160, -1240, (0.14, 0.16, 0.24))
+    mapper.comment = "Compatibility contract: /project1/spotify_fluid_map/mapper/out_projector selects the visible top-level projector output."
+    select = _create(mapper, "selectTOP", "projector_in", -200, 100)
+    _set_par(select, "top", "../null_projector")
+    out_projector = _create(mapper, "outTOP", "out_projector", 40, 100)
+    _connect(out_projector, select)
+    return projector
 
 
 def build(parent=None):
     parent = parent or op("/project1")
     _destroy_existing(parent, ROOT_NAME)
 
-    root = _create(parent, "baseCOMP", ROOT_NAME, 0, 0, (0.1, 0.1, 0.1))
-    root.comment = "Spotify Fluid Map V1: desktop metadata + BlackHole audio + fluid projection output."
+    root = _create(parent, "baseCOMP", ROOT_NAME, 0, 0, (0.08, 0.08, 0.08))
+    root.comment = "Spotify Fluid Map V1: visible album-art VJ patch driven by Spotify metadata, BlackHole audio, and projection safety controls."
     _append_controls(root)
 
-    _build_spotify_meta(root)
-    _build_audio(root)
-    _build_audio_analysis(root)
-    _build_control_bus(root)
-    _build_visual(root)
-    _build_mapper(root)
-    _make_text(root, "README", ROOT_README, -900, -260)
+    _make_label(root, "README", ROOT_README, -1100, 760)
+    null_meta = _build_metadata_lane(root)
+    null_audio = _build_audio_lane(root)
+    _build_control_bus(root, null_meta, null_audio)
+    null_art = _build_artwork_lane(root)
+    texture = _build_spectral_texture_lane(root)
+    visual = _build_feedback_lane(root, texture)
+    _build_visible_mapper_lane(root, visual)
+
+    root.viewer = True
     return root
 
 
 ROOT_README = """
-Spotify Fluid Map V1
+Spotify Fluid Map V1.1
 
-1. Run bridge/spotify_bridge.py from Terminal.
-2. Route Spotify audio to BlackHole using a macOS Multi-Output Device.
-3. Set Audiodevice to your BlackHole input name.
-4. Use Showgrid to align the projector, Blackout for safety, and Brightness/Sensitivity to tune.
-"""
+This is intentionally visible: OSC, audio analysis, album-art texture, spectral noise,
+feedback memory, and projector safety live as readable top-level lanes.
 
-
-VISUAL_NOTES = """
-Audio mapping:
-- low drives feedback scale/displacement intensity
-- mid drives feedback rotation/hue motion
-- high drives sharpness/brightness
-- kick/snare add flash accents
-- track_changed reseeds metadata/control state through the control bus
+Bridge output:
+- runtime/now_playing.json
+- runtime/artwork/*.jpg
+- OSC /spotify/* metadata and deterministic title/artist/album hashes
 """
 
 
@@ -309,8 +453,7 @@ def _latest_values(dat):
         path = row[0].val
         if not path.startswith('/spotify/'):
             continue
-        key = path.split('/')[-1]
-        values[key] = row[1].val
+        values[path.split('/')[-1]] = row[1].val
     return values
 
 
@@ -324,7 +467,7 @@ def _float(values, key, default=0.0):
 def onCook(scriptOp):
     scriptOp.clear()
     scriptOp.numSamples = 1
-    values = _latest_values(op('osc_in'))
+    values = _latest_values(op('spotify_osc'))
     changed = _float(values, 'track_changed')
     seed = float(scriptOp.fetch('track_seed', 0.0))
     if changed > 0:
@@ -337,6 +480,9 @@ def onCook(scriptOp):
         'duration_sec': _float(values, 'duration_sec'),
         'track_changed': changed,
         'track_seed': seed,
+        'title_hash': _float(values, 'title_hash'),
+        'artist_hash': _float(values, 'artist_hash'),
+        'album_hash': _float(values, 'album_hash'),
     }
     for name, value in channels.items():
         chan = scriptOp.appendChan(name)

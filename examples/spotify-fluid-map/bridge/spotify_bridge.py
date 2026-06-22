@@ -9,6 +9,7 @@ sends it to TouchDesigner over OSC, and writes a local runtime JSON snapshot.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import math
 import socket
@@ -16,7 +17,8 @@ import struct
 import subprocess
 import sys
 import time
-from dataclasses import asdict, dataclass
+import urllib.request
+from dataclasses import asdict, dataclass, replace
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterable
@@ -27,6 +29,9 @@ DEFAULT_OSC_PORT = 7000
 DEFAULT_POLL_MS = 500
 DEFAULT_RUNTIME_PATH = (
     Path(__file__).resolve().parents[1] / "runtime" / "now_playing.json"
+)
+DEFAULT_ARTWORK_PATH = (
+    Path(__file__).resolve().parents[1] / "runtime" / "album_art.jpg"
 )
 
 
@@ -59,6 +64,14 @@ def normalize_duration_sec(value: str) -> float:
     return duration
 
 
+def stable_unit_hash(value: str) -> float:
+    text = normalize_text(value).lower()
+    if not text:
+        return 0.0
+    digest = hashlib.sha256(text.encode("utf-8")).digest()
+    return int.from_bytes(digest[:4], "big") / 0xFFFFFFFF
+
+
 @dataclass(frozen=True)
 class TrackState:
     is_playing: bool
@@ -71,6 +84,10 @@ class TrackState:
     track_changed: int
     url: str
     artwork_url: str
+    artwork_path: str
+    title_hash: float
+    artist_hash: float
+    album_hash: float
     track_id: str
     updated_at: str
 
@@ -88,6 +105,10 @@ class TrackState:
             track_changed=track_changed,
             url="",
             artwork_url="",
+            artwork_path="",
+            title_hash=0.0,
+            artist_hash=0.0,
+            album_hash=0.0,
             track_id="",
             updated_at=utc_now(),
         )
@@ -126,12 +147,19 @@ class TrackState:
             track_changed=track_changed,
             url=url,
             artwork_url=artwork_url,
+            artwork_path="",
+            title_hash=stable_unit_hash(title),
+            artist_hash=stable_unit_hash(artist),
+            album_hash=stable_unit_hash(album),
             track_id=track_id,
             updated_at=utc_now(),
         )
 
     def to_runtime_dict(self) -> dict[str, object]:
         return asdict(self)
+
+    def with_artwork_path(self, artwork_path: Path | str) -> "TrackState":
+        return replace(self, artwork_path=str(artwork_path))
 
 
 def parse_key_value_payload(payload: str) -> dict[str, str]:
@@ -197,6 +225,10 @@ class MockSpotifyProvider:
             track_changed=1 if track_id != (self.previous_track_id or "") else 0,
             url=track_id,
             artwork_url="",
+            artwork_path="",
+            title_hash=stable_unit_hash(title),
+            artist_hash=stable_unit_hash(artist),
+            album_hash=stable_unit_hash(album),
             track_id=track_id,
             updated_at=utc_now(),
         )
@@ -221,6 +253,10 @@ class OscSender:
             ("/spotify/album", state.album),
             ("/spotify/url", state.url),
             ("/spotify/artwork_url", state.artwork_url),
+            ("/spotify/artwork_path", state.artwork_path),
+            ("/spotify/title_hash", float(state.title_hash)),
+            ("/spotify/artist_hash", float(state.artist_hash)),
+            ("/spotify/album_hash", float(state.album_hash)),
         ]
         for path, value in messages:
             self.socket.sendto(encode_osc_message(path, value), self.address)
@@ -258,15 +294,48 @@ def write_runtime_state(state: TrackState, output_path: Path) -> None:
     )
 
 
+class ArtworkCache:
+    def __init__(self, output_path: Path) -> None:
+        self.output_path = output_path
+
+    def update(self, state: TrackState) -> TrackState:
+        if not state.artwork_url:
+            return state.with_artwork_path("")
+
+        artwork_path = self.path_for_url(state.artwork_url)
+        if not artwork_path.exists():
+            artwork_path.parent.mkdir(parents=True, exist_ok=True)
+            tmp_path = artwork_path.with_suffix(artwork_path.suffix + ".tmp")
+            try:
+                with urllib.request.urlopen(state.artwork_url, timeout=5.0) as response:
+                    tmp_path.write_bytes(response.read())
+                tmp_path.replace(artwork_path)
+            except Exception:
+                tmp_path.unlink(missing_ok=True)
+
+        if artwork_path.exists():
+            self.output_path.parent.mkdir(parents=True, exist_ok=True)
+            self.output_path.write_bytes(artwork_path.read_bytes())
+            return state.with_artwork_path(artwork_path)
+        return state
+
+    def path_for_url(self, artwork_url: str) -> Path:
+        digest = hashlib.sha256(artwork_url.encode("utf-8")).hexdigest()[:16]
+        return self.output_path.parent / "artwork" / f"{digest}{self.output_path.suffix}"
+
+
 def run_bridge(
     provider: SpotifyAppleScriptProvider | MockSpotifyProvider,
     sender: OscSender,
     runtime_path: Path,
     poll_ms: int,
+    artwork_cache: ArtworkCache | None = None,
 ) -> None:
     interval = max(50, poll_ms) / 1000.0
     while True:
         state = provider.get_state()
+        if artwork_cache is not None:
+            state = artwork_cache.update(state)
         sender.send_state(state)
         write_runtime_state(state, runtime_path)
         time.sleep(interval)
@@ -278,6 +347,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--osc-port", type=int, default=DEFAULT_OSC_PORT)
     parser.add_argument("--poll-ms", type=int, default=DEFAULT_POLL_MS)
     parser.add_argument("--runtime-path", type=Path, default=DEFAULT_RUNTIME_PATH)
+    parser.add_argument("--artwork-path", type=Path, default=DEFAULT_ARTWORK_PATH)
     parser.add_argument(
         "--mock",
         action="store_true",
@@ -290,8 +360,9 @@ def main(argv: Iterable[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     provider = MockSpotifyProvider() if args.mock else SpotifyAppleScriptProvider()
     sender = OscSender(args.osc_host, args.osc_port)
+    artwork_cache = None if args.mock else ArtworkCache(args.artwork_path)
     try:
-        run_bridge(provider, sender, args.runtime_path, args.poll_ms)
+        run_bridge(provider, sender, args.runtime_path, args.poll_ms, artwork_cache)
     except KeyboardInterrupt:
         return 0
 
