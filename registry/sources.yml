@@ -60,7 +60,49 @@ sources:
     type: community-toolkit
     url: https://github.com/t3kt/raytk
     priority: candidate
-    notes: Raymarching/shader network toolkit. Version-gate for TD 2023.
+    notes: Raymarching/shader network toolkit. Spotify example pins RayTK 0.37 instead of latest because current latest targets TD 2025.
+  - id: td-toxes-performance-pack
+    name: Useful TouchDesigner Toxes
+    type: community-asset-repo
+    url: https://github.com/aaronmylespereira/TD-Toxes
+    priority: default-download
+    notes: MIT-licensed VJ effects pack saved with TouchDesigner 2023.11600; includes abstract fluid, datamosh, feedback, pixel sorting, and reaction diffusion toxes.
+  - id: td-13tap-bloom
+    name: 13 Tap Bloom
+    type: community-asset-repo
+    url: https://github.com/EnviralDesign/TD-13TapBloom
+    priority: default-download
+    notes: MIT-licensed high quality bloom component for HDR/linear TOP pipelines.
+  - id: isf-touchdesigner
+    name: ISF TouchDesigner
+    type: community-asset-repo
+    url: https://github.com/marcinbiegun/isf-touchdesigner
+    priority: default-download
+    notes: MIT-licensed parser component for loading ISF GLSL shaders in TouchDesigner.
+  - id: vidvox-isf-files
+    name: VIDVOX ISF Files
+    type: shader-library
+    url: https://github.com/Vidvox/ISF-Files
+    priority: default-download
+    notes: MIT-licensed ISF generator/filter collection for shader auditioning.
+  - id: dominant-color
+    name: TouchDesigner Dominant Color
+    type: community-asset-repo
+    url: https://github.com/raganmd/touchdesigner-dominant-color
+    priority: default-download
+    notes: MIT-licensed KMeans/openCV color extraction component; useful reference for album-art palette analysis but older Python dependency notes.
+  - id: okvj-shared
+    name: okVJ Shared
+    type: community-asset-repo
+    url: https://github.com/ok-vj/okVJ-Shared
+    priority: optional-local
+    notes: GPL-3.0 live-performance UI, MIDI mapping, sequencers, modulators, and audio analysis. Keep local unless intentionally adopting GPL-compatible terms.
+  - id: geopix
+    name: GeoPix
+    type: community-toolkit
+    url: https://github.com/EnviralDesign/GeoPix
+    priority: manual-research
+    notes: MIT-licensed lighting control and previz app built in TouchDesigner; large full application, useful for LED/pixel mapping research rather than direct import.
   - id: fulldome-simulator
     name: TouchDesigner Fulldome Simulator TOX
     type: community-asset

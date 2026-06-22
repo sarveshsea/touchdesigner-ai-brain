@@ -1,0 +1,61 @@
+{
+  "id": "triptych_stage_1920x1080",
+  "name": "Triptych Stage",
+  "output_resolution": [1920, 1080],
+  "description": "Three vertical mapped panels with narrow gutters for scenic flats, screens, or wall sections.",
+  "surfaces": [
+    {
+      "id": "left_panel",
+      "type": "quad",
+      "label": "Left panel",
+      "corners_norm": [
+        [0.025, 0.08],
+        [0.318, 0.08],
+        [0.318, 0.92],
+        [0.025, 0.92]
+      ],
+      "uv_norm": [
+        [0.0, 0.0],
+        [0.3333, 0.0],
+        [0.3333, 1.0],
+        [0.0, 1.0]
+      ]
+    },
+    {
+      "id": "center_panel",
+      "type": "quad",
+      "label": "Center panel",
+      "corners_norm": [
+        [0.353, 0.04],
+        [0.647, 0.04],
+        [0.647, 0.96],
+        [0.353, 0.96]
+      ],
+      "uv_norm": [
+        [0.3333, 0.0],
+        [0.6667, 0.0],
+        [0.6667, 1.0],
+        [0.3333, 1.0]
+      ]
+    },
+    {
+      "id": "right_panel",
+      "type": "quad",
+      "label": "Right panel",
+      "corners_norm": [
+        [0.682, 0.08],
+        [0.975, 0.08],
+        [0.975, 0.92],
+        [0.682, 0.92]
+      ],
+      "uv_norm": [
+        [0.6667, 0.0],
+        [1.0, 0.0],
+        [1.0, 1.0],
+        [0.6667, 1.0]
+      ]
+    }
+  ],
+  "recommended_td_tool": "Kantan Mapper",
+  "notes": "Good first complex layout for splitting album-derived visuals into separate scenic surfaces."
+}

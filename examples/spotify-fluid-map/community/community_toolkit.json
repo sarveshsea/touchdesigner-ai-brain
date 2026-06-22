@@ -1,0 +1,248 @@
+{
+  "generated": "2026-06-22",
+  "touchdesigner_version": "2023.11600",
+  "runtime_destination": "examples/spotify-fluid-map/runtime/community",
+  "notes": [
+    "Third-party TouchDesigner files are executable local artifacts. Download into runtime only, smoke-test in a blank project, then decide what to import.",
+    "Do not commit downloaded .toe or .tox files unless a future example intentionally vendors them with license and smoke-test notes."
+  ],
+  "entries": [
+    {
+      "id": "embody-envoy",
+      "name": "Embody / Envoy",
+      "category": "live-build-mcp",
+      "source_url": "https://github.com/dylanroscover/Embody",
+      "license": "MIT",
+      "fetch": {
+        "mode": "github_release_asset",
+        "repo": "dylanroscover/Embody",
+        "tag": "v6.0.39",
+        "asset": "Embody-v6.0.39.tox"
+      },
+      "download_default": true,
+      "touchdesigner_fit": "Live TouchDesigner MCP bridge and diffable TDN workflow. Import manually and bind Envoy to localhost.",
+      "use_for": [
+        "live network editing",
+        "operator error inspection",
+        "TDN export/import"
+      ],
+      "intake_notes": "Powerful local automation bridge. Enable only in trusted projects and keep localhost-only."
+    },
+    {
+      "id": "raytk-td2023",
+      "name": "RayTK 0.37",
+      "category": "raymarching",
+      "source_url": "https://github.com/t3kt/raytk",
+      "license": "CC-BY-4.0",
+      "fetch": {
+        "mode": "github_release_asset",
+        "repo": "t3kt/raytk",
+        "tag": "build-0.37",
+        "asset": "RayTK-0.37.tox"
+      },
+      "download_default": true,
+      "touchdesigner_fit": "Pinned to a TD-2023-era RayTK release instead of the TD-2025-oriented latest release.",
+      "use_for": [
+        "raymarched worlds",
+        "volumetric-looking VJ scenes",
+        "track-change scene reseeding"
+      ],
+      "intake_notes": "Attribute RayTK/tekt. Smoke-test with TD 2023.11600 before importing into the Spotify patch."
+    },
+    {
+      "id": "td-toxes-performance-pack",
+      "name": "Useful TouchDesigner Toxes",
+      "category": "vj-effects",
+      "source_url": "https://github.com/aaronmylespereira/TD-Toxes",
+      "license": "MIT",
+      "fetch": {
+        "mode": "git_clone",
+        "repo": "aaronmylespereira/TD-Toxes",
+        "ref": "main"
+      },
+      "download_default": true,
+      "touchdesigner_fit": "Created in TouchDesigner 2023.11600, matching the local target.",
+      "use_for": [
+        "abstract fluid",
+        "datamosh",
+        "feedback",
+        "pixel sorting",
+        "reaction diffusion"
+      ],
+      "intake_notes": "Good first audition pack for post-album-art effects. Prefer Engine COMP if chaining multiple heavy effects."
+    },
+    {
+      "id": "td-13tap-bloom",
+      "name": "13 Tap Bloom",
+      "category": "vj-effects",
+      "source_url": "https://github.com/EnviralDesign/TD-13TapBloom",
+      "license": "MIT",
+      "fetch": {
+        "mode": "git_clone",
+        "repo": "EnviralDesign/TD-13TapBloom",
+        "ref": "main"
+      },
+      "download_default": true,
+      "touchdesigner_fit": "High quality bloom component with a small source repo and clear license.",
+      "use_for": [
+        "HDR bloom",
+        "kick-driven light bursts",
+        "final output glow"
+      ],
+      "intake_notes": "Designed for linear/HDR pipelines. Confirm color-space handling before replacing the built-in bloom lane."
+    },
+    {
+      "id": "isf-touchdesigner",
+      "name": "ISF TouchDesigner Parser",
+      "category": "shader-loader",
+      "source_url": "https://github.com/marcinbiegun/isf-touchdesigner",
+      "license": "MIT",
+      "fetch": {
+        "mode": "git_clone",
+        "repo": "marcinbiegun/isf-touchdesigner",
+        "ref": "master"
+      },
+      "download_default": true,
+      "touchdesigner_fit": "Lets TouchDesigner host ISF GLSL generators and filters from Text DATs.",
+      "use_for": [
+        "shader effects",
+        "generative texture sources",
+        "audio-reactive ISF experiments"
+      ],
+      "intake_notes": "Test with a tiny ISF shader first, then wire TD audio bands into exposed ISF parameters."
+    },
+    {
+      "id": "vidvox-isf-files",
+      "name": "VIDVOX ISF Files",
+      "category": "shader-library",
+      "source_url": "https://github.com/Vidvox/ISF-Files",
+      "license": "MIT",
+      "fetch": {
+        "mode": "git_clone",
+        "repo": "Vidvox/ISF-Files",
+        "ref": "master"
+      },
+      "download_default": true,
+      "touchdesigner_fit": "MIT-licensed collection of ISF generators and filters for use with the ISF parser.",
+      "use_for": [
+        "shader library",
+        "fast effect auditions",
+        "metadata-driven visual mode selection"
+      ],
+      "intake_notes": "Load individual shaders into isfParser rather than importing the whole library into a show patch."
+    },
+    {
+      "id": "dominant-color",
+      "name": "TouchDesigner Dominant Color",
+      "category": "album-art-analysis",
+      "source_url": "https://github.com/raganmd/touchdesigner-dominant-color",
+      "license": "MIT",
+      "fetch": {
+        "mode": "git_clone",
+        "repo": "raganmd/touchdesigner-dominant-color",
+        "ref": "master"
+      },
+      "download_default": true,
+      "touchdesigner_fit": "KMeans color extraction component that can inspire or replace album-art palette logic.",
+      "use_for": [
+        "album cover palette extraction",
+        "track palette reseeding",
+        "cover-driven ramp generation"
+      ],
+      "intake_notes": "Older TD/Python dependency notes. Use as reference first; prefer the repo bridge's lightweight artwork hash path for live-critical use."
+    },
+    {
+      "id": "maxmainio-td-components-core",
+      "name": "MaxMainio TD_ Core Visual Components",
+      "category": "image-processing",
+      "source_url": "https://github.com/MaxMainio/TD_",
+      "license": "MIT",
+      "fetch": {
+        "mode": "git_sparse",
+        "repo": "MaxMainio/TD_",
+        "ref": "main",
+        "paths": [
+          "TOPs/Image Analysis",
+          "TOPs/Edge Detectors",
+          "TOPs/Mapping",
+          "TOPs/SDF",
+          "TOPs/Texture Synthesis",
+          "TOPs/Sorting",
+          "TOPs/Noise",
+          "CHOPs/Multi Generators",
+          "README.md",
+          "LICENSE"
+        ]
+      },
+      "download_default": true,
+      "touchdesigner_fit": "Large MIT component library; sparse fetch only the pieces most relevant to Spotify visuals.",
+      "use_for": [
+        "edge maps from album art",
+        "SDF masks",
+        "texture synthesis",
+        "pixel sorting",
+        "mapping helpers"
+      ],
+      "intake_notes": "The author describes the collection as living/unfinished. Smoke-test each component before show use."
+    },
+    {
+      "id": "okvj-shared",
+      "name": "okVJ Shared",
+      "category": "vj-control-surface",
+      "source_url": "https://github.com/ok-vj/okVJ-Shared",
+      "license": "GPL-3.0",
+      "fetch": {
+        "mode": "github_release_asset",
+        "repo": "ok-vj/okVJ-Shared",
+        "tag": "0.91",
+        "asset": "okVJ-Shared.zip"
+      },
+      "download_default": false,
+      "touchdesigner_fit": "Local sandbox candidate for a VJ UI, MIDI mapping, sequencer, modulators, and audio analysis.",
+      "use_for": [
+        "performance UI",
+        "MIDI mapping",
+        "step sequencers",
+        "modulators"
+      ],
+      "intake_notes": "GPL-3.0. Keep local unless we intentionally design a GPL-compatible derivative workflow."
+    },
+    {
+      "id": "geopix",
+      "name": "GeoPix",
+      "category": "led-pixel-mapping",
+      "source_url": "https://github.com/EnviralDesign/GeoPix",
+      "license": "MIT",
+      "fetch": {
+        "mode": "manual"
+      },
+      "download_default": false,
+      "touchdesigner_fit": "Full open-source lighting control and previz app built in TouchDesigner, useful for future LED/pixel mapping research.",
+      "use_for": [
+        "LED pixel mapping research",
+        "DMX/Art-Net style show-control ideas",
+        "previz architecture"
+      ],
+      "intake_notes": "Large full application and older TD target. Study separately before mixing with Spotify Fluid Map."
+    },
+    {
+      "id": "derivative-mapping-palette",
+      "name": "Derivative Mapping Palette",
+      "category": "projection-mapping",
+      "source_url": "https://docs.derivative.ca/Projection_Mapping",
+      "license": "TouchDesigner built-in",
+      "fetch": {
+        "mode": "builtin"
+      },
+      "download_default": false,
+      "touchdesigner_fit": "Built-in Kantan Mapper, CamSchnappr, Projector Blend, Stoner, Quad Reproject, Vioso, and Corner Pin tools.",
+      "use_for": [
+        "flat mapping",
+        "3D-object calibration",
+        "multi-projector blend",
+        "mesh warping"
+      ],
+      "intake_notes": "Use the Palette versions first. These are the show-facing mapping tools before community mapping experiments."
+    }
+  ]
+}

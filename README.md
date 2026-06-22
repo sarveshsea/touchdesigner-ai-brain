@@ -141,13 +141,26 @@ Derivative's built-in Palette and docs are the first stop before pulling in comm
 
 ## Community Components To Evaluate
 
-These are not vendored here yet. They are tracked as candidates in `registry/sources.yml` and should be smoke-tested before show use:
+These are not vendored here. They are tracked as candidates in `registry/sources.yml` and, for the Spotify example, in a manifest-driven downloader that stores files under ignored runtime storage:
 
-- [Strobber Tox](https://derivative.ca/community-post/asset/strobber-tox-%E2%94%83-top-effector-audio-reactive/71752)
-- [TD Synapse](https://derivative.ca/community-post/asset/td-synapse/74347)
+```bash
+python3 examples/spotify-fluid-map/scripts/fetch_community_toolkit.py --list
+python3 examples/spotify-fluid-map/scripts/fetch_community_toolkit.py
+```
+
+The current Spotify toolkit candidates include:
+
+- [Embody / Envoy](https://github.com/dylanroscover/Embody)
+- [RayTK](https://github.com/t3kt/raytk), pinned to a TD-2023-era release
+- [Useful TouchDesigner Toxes](https://github.com/aaronmylespereira/TD-Toxes)
+- [13 Tap Bloom](https://github.com/EnviralDesign/TD-13TapBloom)
+- [ISF TouchDesigner](https://github.com/marcinbiegun/isf-touchdesigner)
+- [VIDVOX ISF Files](https://github.com/Vidvox/ISF-Files)
 - [MaxMainio TD_ Components](https://github.com/MaxMainio/TD_)
-- [RayTK](https://github.com/t3kt/raytk)
-- [TouchDesigner Fulldome Simulator TOX](https://derivative.ca/community-post/asset/touchdesigner-fulldome-simulator-tox-beta/72740)
+- [TouchDesigner Dominant Color](https://github.com/raganmd/touchdesigner-dominant-color)
+- optional local-only candidates such as [okVJ Shared](https://github.com/ok-vj/okVJ-Shared)
+
+See [examples/spotify-fluid-map/docs/community-toolkit.md](examples/spotify-fluid-map/docs/community-toolkit.md) for the intake order and license notes.
 
 ## Safety Model
 

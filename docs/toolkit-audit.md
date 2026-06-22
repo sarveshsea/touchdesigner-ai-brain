@@ -115,6 +115,27 @@ Priority items to study:
 
 ## Derivative Community Assets to Track
 
+Spotify Fluid Map now has a manifest-driven downloader at `examples/spotify-fluid-map/community/community_toolkit.json`. It downloads vetted candidates into ignored runtime storage instead of vendoring executable `.tox`/`.toe` files into the public repo.
+
+```bash
+python3 examples/spotify-fluid-map/scripts/fetch_community_toolkit.py --list
+python3 examples/spotify-fluid-map/scripts/fetch_community_toolkit.py
+```
+
+The first practical audition stack is:
+
+- `aaronmylespereira/TD-Toxes` for TD 2023-native abstract fluid, datamosh, feedback, pixel sorting, and reaction diffusion.
+- `EnviralDesign/TD-13TapBloom` for stronger bloom and kick-driven light bursts.
+- `t3kt/raytk` pinned to RayTK 0.37 for TD-2023-era raymarching instead of the TD-2025-oriented latest release.
+- `marcinbiegun/isf-touchdesigner` plus `Vidvox/ISF-Files` for MIT ISF shaders and shader-effect auditioning.
+- a sparse `MaxMainio/TD_` subset for edge maps, SDF masks, texture synthesis, sorting, and image-analysis experiments.
+- `raganmd/touchdesigner-dominant-color` as a reference for album-art palette extraction, not yet a live-critical dependency.
+
+Optional local-only candidates:
+
+- `ok-vj/okVJ-Shared` is attractive for VJ UI, MIDI mapping, sequencers, modulators, and audio analysis, but it is GPL-3.0. Keep it in local runtime storage unless a future derivative is intentionally GPL-compatible.
+- `EnviralDesign/GeoPix` is valuable for LED/pixel mapping research, but it is a large full application rather than a direct import into Spotify Fluid Map.
+
 ### Strobber Tox
 
 Source: https://derivative.ca/community-post/asset/strobber-tox-%E2%94%83-top-effector-audio-reactive/71752
@@ -179,4 +200,3 @@ Verdict: **High creative value, version-gate carefully**.
 6. Add bottobot docs MCP as a reference server.
 7. Add vetted `.tox` assets one at a time with smoke-test notes.
 8. Build a house VJ template: audio input, analysis, cueable scenes, effects rack, mixer, mapping output, telemetry, emergency blackout.
-

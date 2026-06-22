@@ -1,0 +1,38 @@
+{
+  "id": "flat_wall_1920x1080",
+  "name": "Flat Wall",
+  "output_resolution": [1920, 1080],
+  "description": "Single-projector full-frame wall mapping with a safe inset alignment frame.",
+  "surfaces": [
+    {
+      "id": "main",
+      "type": "quad",
+      "label": "Main wall",
+      "corners_norm": [
+        [0.0, 0.0],
+        [1.0, 0.0],
+        [1.0, 1.0],
+        [0.0, 1.0]
+      ],
+      "uv_norm": [
+        [0.0, 0.0],
+        [1.0, 0.0],
+        [1.0, 1.0],
+        [0.0, 1.0]
+      ]
+    },
+    {
+      "id": "safe_inset",
+      "type": "guide",
+      "label": "Safe inset",
+      "corners_norm": [
+        [0.04, 0.06],
+        [0.96, 0.06],
+        [0.96, 0.94],
+        [0.04, 0.94]
+      ]
+    }
+  ],
+  "recommended_td_tool": "Corner Pin TOP or Kantan Mapper",
+  "notes": "Use this for first light, focus, and projector alignment before adding masks."
+}

@@ -1,0 +1,61 @@
+{
+  "id": "cube_faces_1920x1080",
+  "name": "Cube Faces",
+  "output_resolution": [1920, 1080],
+  "description": "Three visible cube faces arranged for a tabletop box, plinth, or simple stage block.",
+  "surfaces": [
+    {
+      "id": "front_face",
+      "type": "quad",
+      "label": "Front face",
+      "corners_norm": [
+        [0.29, 0.42],
+        [0.71, 0.42],
+        [0.71, 0.9],
+        [0.29, 0.9]
+      ],
+      "uv_norm": [
+        [0.0, 0.0],
+        [1.0, 0.0],
+        [1.0, 1.0],
+        [0.0, 1.0]
+      ]
+    },
+    {
+      "id": "top_face",
+      "type": "quad",
+      "label": "Top face",
+      "corners_norm": [
+        [0.29, 0.42],
+        [0.5, 0.18],
+        [0.71, 0.42],
+        [0.5, 0.66]
+      ],
+      "uv_norm": [
+        [0.0, 1.0],
+        [0.5, 0.0],
+        [1.0, 1.0],
+        [0.5, 1.0]
+      ]
+    },
+    {
+      "id": "right_face",
+      "type": "quad",
+      "label": "Right face",
+      "corners_norm": [
+        [0.71, 0.42],
+        [0.84, 0.54],
+        [0.84, 0.96],
+        [0.71, 0.9]
+      ],
+      "uv_norm": [
+        [0.0, 0.0],
+        [1.0, 0.0],
+        [1.0, 1.0],
+        [0.0, 1.0]
+      ]
+    }
+  ],
+  "recommended_td_tool": "CamSchnappr if using a real 3D model; Kantan Mapper for a quick fake-isometric test.",
+  "notes": "Use the front face for metadata-heavy motion and top/right faces for echo trails or spectrum-derived masks."
+}

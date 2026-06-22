@@ -118,6 +118,39 @@ The builder intentionally leaves the creative patch visible at the top level of 
 - feedback lane: memory feedback, orbit/decay, kick/snare flash, final drift
 - mapper lane: corner pin, freeze, alignment grid, blackout, final output
 
+## 4. Fetch Community Toolkit Candidates
+
+The repo keeps third-party TouchDesigner assets out of git, but includes a vetted local downloader:
+
+```bash
+python3 examples/spotify-fluid-map/scripts/fetch_community_toolkit.py --list
+python3 examples/spotify-fluid-map/scripts/fetch_community_toolkit.py
+```
+
+Default downloads include a TD 2023 performance tox pack, RayTK 0.37, Embody/Envoy, 13 Tap Bloom, ISF tooling, VIDVOX ISF shaders, a dominant-color reference component, and a sparse subset of MaxMainio's image-processing components.
+
+Downloaded files land in ignored runtime storage:
+
+```text
+examples/spotify-fluid-map/runtime/community/
+```
+
+See [docs/community-toolkit.md](docs/community-toolkit.md) for the audition order, license notes, and how each tool can feed album-art-driven visuals, shaders, raymarching, bloom, feedback, mapping, and future VJ controls.
+
+Optional song metadata enrichment via MusicBrainz:
+
+```bash
+python3 examples/spotify-fluid-map/scripts/enrich_now_playing_musicbrainz.py
+```
+
+This writes ignored runtime metadata to:
+
+```text
+examples/spotify-fluid-map/runtime/song_enrichment.json
+```
+
+MusicBrainz enrichment is cache-first and separate from the live OSC bridge so the visual patch stays responsive.
+
 ## OSC Interface
 
 The bridge sends these messages:
