@@ -43,6 +43,12 @@ def _set_par(node, name, value=None, expr=None):
         par.val = value
 
 
+def _set_top_resolution(node, width=WIDTH, height=HEIGHT):
+    _set_par(node, "outputresolution", "custom")
+    _set_par(node, "resolutionw", width)
+    _set_par(node, "resolutionh", height)
+
+
 def _connect(dst, src, index=0):
     try:
         dst.setInput(index, src)
@@ -155,12 +161,10 @@ def _build_visual(root):
     comp.comment = "Fluid-ish feedback TOP chain driven by control_bus/null_control."
 
     ramp = _create(comp, "rampTOP", "palette_ramp", -500, 260)
-    _set_par(ramp, "resolutionw", WIDTH)
-    _set_par(ramp, "resolutionh", HEIGHT)
+    _set_top_resolution(ramp)
 
     noise = _create(comp, "noiseTOP", "driver_noise", -500, 60)
-    _set_par(noise, "resolutionw", WIDTH)
-    _set_par(noise, "resolutionh", HEIGHT)
+    _set_top_resolution(noise)
     _set_par(noise, "period", expr="2.0 - op('../control_bus/null_control')['low'][0] * 1.25")
     _set_par(noise, "offsetx", expr="absTime.seconds * (0.04 + op('../control_bus/null_control')['mid'][0] * 0.12)")
     _set_par(noise, "offsety", expr="absTime.seconds * (0.03 + op('../control_bus/null_control')['high'][0] * 0.10)")
@@ -212,13 +216,28 @@ def _build_mapper(root):
     _set_par(freeze_switch, "index", expr="1 if parent(2).par.Freeze else 0")
     _set_par(freeze_feedback, "targettop", freeze_switch.path)
 
-    grid = _create(mapper, "checkerTOP", "test_grid", -340, -240)
-    _set_par(grid, "resolutionw", WIDTH)
-    _set_par(grid, "resolutionh", HEIGHT)
+    grid_cell = _create(mapper, "rectangleTOP", "grid_cell", -560, -240)
+    _set_top_resolution(grid_cell, 160, 90)
+    _set_par(grid_cell, "sizeunit", "fraction")
+    _set_par(grid_cell, "sizex", 1.0)
+    _set_par(grid_cell, "sizey", 1.0)
+    _set_par(grid_cell, "fillalpha", 0.0)
+    _set_par(grid_cell, "borderwidth", 2.0)
+    _set_par(grid_cell, "borderr", 0.0)
+    _set_par(grid_cell, "borderg", 0.9)
+    _set_par(grid_cell, "borderb", 1.0)
+    _set_par(grid_cell, "bgcolorr", 0.02)
+    _set_par(grid_cell, "bgcolorg", 0.02)
+    _set_par(grid_cell, "bgcolorb", 0.02)
+
+    grid = _create(mapper, "tileTOP", "test_grid", -340, -240)
+    _connect(grid, grid_cell)
+    _set_top_resolution(grid)
+    _set_par(grid, "repeatx", 12)
+    _set_par(grid, "repeaty", 12)
 
     blackout = _create(mapper, "constantTOP", "blackout", -340, -440)
-    _set_par(blackout, "resolutionw", WIDTH)
-    _set_par(blackout, "resolutionh", HEIGHT)
+    _set_top_resolution(blackout)
     _set_par(blackout, "colorr", 0)
     _set_par(blackout, "colorg", 0)
     _set_par(blackout, "colorb", 0)

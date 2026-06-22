@@ -52,6 +52,13 @@ def normalize_text(value: str) -> str:
     return " ".join(str(value or "").replace("\r", " ").replace("\n", " ").split())
 
 
+def normalize_duration_sec(value: str) -> float:
+    duration = max(0.0, parse_float(value))
+    if duration > 10000:
+        return duration / 1000.0
+    return duration
+
+
 @dataclass(frozen=True)
 class TrackState:
     is_playing: bool
@@ -94,7 +101,7 @@ class TrackState:
         if state not in {"playing", "paused"}:
             return cls.stopped(previous_track_id)
 
-        duration_sec = max(0.0, parse_float(values.get("duration", "0")))
+        duration_sec = normalize_duration_sec(values.get("duration", "0"))
         position_sec = max(0.0, parse_float(values.get("position", "0")))
         progress_norm = 0.0
         if duration_sec > 0:

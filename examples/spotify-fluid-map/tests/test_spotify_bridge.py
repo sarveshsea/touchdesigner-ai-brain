@@ -50,6 +50,26 @@ class SpotifyBridgeTests(unittest.TestCase):
         self.assertEqual(state.track_changed, 1)
         self.assertEqual(state.track_id, "https://open.spotify.com/track/example")
 
+    def test_parse_spotify_applescript_duration_milliseconds(self):
+        payload = "\n".join(
+            [
+                "state=paused",
+                "title=eye2eye",
+                "artist=Tsu Nami",
+                "album=eye2eye",
+                "duration=195000",
+                "position=3.9",
+                "url=spotify:track:example",
+                "artwork_url=https://i.scdn.co/image/example",
+            ]
+        )
+
+        state = self.bridge.TrackState.from_applescript_payload(payload, previous_track_id=None)
+
+        self.assertFalse(state.is_playing)
+        self.assertEqual(state.duration_sec, 195.0)
+        self.assertAlmostEqual(state.progress_norm, 3.9 / 195.0)
+
     def test_parse_stopped_payload_uses_safe_defaults(self):
         state = self.bridge.TrackState.from_applescript_payload(
             "state=stopped\nposition=0", previous_track_id="old-track"
