@@ -3,4 +3,9 @@ __pycache__/
 .DS_Store
 .env
 .env.*
+.mcp.json
 
+# TouchDesigner project/component binaries are executable local artifacts.
+# Force-add intentional examples after documenting source and license.
+*.toe
+*.tox
