@@ -9,3 +9,6 @@ __pycache__/
 # Force-add intentional examples after documenting source and license.
 *.toe
 *.tox
+
+examples/**/runtime/
+examples/**/logs/

@@ -1,6 +1,7 @@
 import importlib.util
 import json
 import socket
+import sys
 import tempfile
 import threading
 import time
@@ -14,6 +15,7 @@ MODULE_PATH = Path(__file__).resolve().parents[1] / "bridge" / "spotify_bridge.p
 def load_bridge():
     spec = importlib.util.spec_from_file_location("spotify_bridge", MODULE_PATH)
     module = importlib.util.module_from_spec(spec)
+    sys.modules["spotify_bridge"] = module
     spec.loader.exec_module(module)
     return module
 
