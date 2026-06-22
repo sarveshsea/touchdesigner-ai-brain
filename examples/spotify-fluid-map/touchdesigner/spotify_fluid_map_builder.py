@@ -95,17 +95,22 @@ def _connect(dst, src, index=0):
 
 def _append_controls(root):
     page = root.appendCustomPage("Performance")
-    page.appendToggle("Blackout", label="Blackout")[0].default = False
-    page.appendToggle("Freeze", label="Freeze")[0].default = False
-    page.appendToggle("Showgrid", label="Show Grid")[0].default = False
+    _init_custom_par(page.appendToggle("Blackout", label="Blackout")[0], False)
+    _init_custom_par(page.appendToggle("Freeze", label="Freeze")[0], False)
+    _init_custom_par(page.appendToggle("Showgrid", label="Show Grid")[0], False)
     page.appendPulse("Resetfeedback", label="Reset Feedback")
-    page.appendStr("Audiodevice", label="Audio Device")[0].default = "BlackHole 2ch"
-    page.appendFloat("Sensitivity", label="Sensitivity")[0].default = 1.0
-    page.appendFloat("Brightness", label="Brightness")[0].default = 1.0
-    page.appendFloat("Visualintensity", label="Visual Intensity")[0].default = 1.0
-    page.appendFloat("Coverweight", label="Cover Weight")[0].default = 0.72
-    page.appendFloat("Feedbackdecay", label="Feedback Decay")[0].default = 0.94
-    page.appendFloat("Grain", label="Grain")[0].default = 0.28
+    _init_custom_par(page.appendStr("Audiodevice", label="Audio Device")[0], "BlackHole 2ch")
+    _init_custom_par(page.appendFloat("Sensitivity", label="Sensitivity")[0], 1.0)
+    _init_custom_par(page.appendFloat("Brightness", label="Brightness")[0], 0.62)
+    _init_custom_par(page.appendFloat("Visualintensity", label="Visual Intensity")[0], 0.82)
+    _init_custom_par(page.appendFloat("Coverweight", label="Cover Weight")[0], 0.86)
+    _init_custom_par(page.appendFloat("Feedbackdecay", label="Feedback Decay")[0], 0.91)
+    _init_custom_par(page.appendFloat("Grain", label="Grain")[0], 0.22)
+
+
+def _init_custom_par(par, value):
+    par.default = value
+    par.val = value
 
 
 def _osc_string_expr(path, fallback):
@@ -155,12 +160,12 @@ def _build_audio_lane(root):
     )
     audio = _create(root, "audiodeviceinCHOP", "audio_device_in", -820, 280, (0.12, 0.18, 0.22))
     _set_par(audio, "driver", "default")
-    _set_par(audio, "device", expr="parent().par.Audiodevice")
+    _set_par(audio, "device", expr="parent().par.Audiodevice.eval()")
     _set_par(audio, "active", True)
 
     gain = _create(root, "mathCHOP", "audio_gain", -600, 280, (0.12, 0.18, 0.22))
     _connect(gain, audio)
-    _set_par(gain, "gain", expr="parent().par.Sensitivity")
+    _set_par(gain, "gain", expr="parent().par.Sensitivity.eval()")
 
     spectrum = _create(root, "audiospectrumCHOP", "audio_spectrum", -360, 360, (0.12, 0.22, 0.16))
     _connect(spectrum, gain)
@@ -297,7 +302,7 @@ def _build_artwork_lane(root):
     _connect(art_level, art)
     _set_par(art_level, "brightness1", expr="0.75 + op('null_control')['energy'][0] * 0.35")
     _set_par(art_level, "contrast", expr="1.05 + op('null_control')['mid'][0] * 0.45")
-    _set_par(art_level, "opacity", expr="parent().par.Coverweight")
+    _set_par(art_level, "opacity", expr="parent().par.Coverweight.eval()")
 
     art_zoom = _create(root, "transformTOP", "album_art_zoom_orbit", -340, 40, (0.20, 0.16, 0.12))
     _connect(art_zoom, art_level)
@@ -344,13 +349,23 @@ def _build_spectral_texture_lane(root):
 
     high_noise = _create(root, "noiseTOP", "high_grain_noise", -820, -560, (0.12, 0.20, 0.18))
     _set_top_resolution(high_noise)
-    _set_par(high_noise, "period", expr="0.28 + parent().par.Grain")
+    _set_par(high_noise, "period", expr="0.28 + parent().par.Grain.eval()")
     _set_par(high_noise, "tx", expr="absTime.seconds * (0.28 + op('null_control')['high'][0] * 0.8)")
     _set_par(high_noise, "seed", expr="int(op('null_control')['track_seed'][0] * 23 + op('null_control')['album_hash'][0] * 1600)")
+
+    high_noise_tone = _create(root, "levelTOP", "high_grain_tone", -560, -720, (0.12, 0.20, 0.18))
+    _connect(high_noise_tone, high_noise)
+    _set_par(high_noise_tone, "brightness1", expr="0.16 + op('null_control')['high'][0] * 0.26")
+    _set_par(high_noise_tone, "opacity", 1.0)
 
     palette = _create(root, "rampTOP", "metadata_palette_ramp", -560, -560, (0.16, 0.12, 0.20))
     _set_top_resolution(palette)
     _set_par(palette, "phase", expr="op('null_control')['progress_norm'][0] + op('null_control')['artist_hash'][0]")
+
+    palette_tone = _create(root, "levelTOP", "metadata_palette_tone", -320, -560, (0.16, 0.12, 0.20))
+    _connect(palette_tone, palette)
+    _set_par(palette_tone, "brightness1", expr="0.22 + op('null_control')['mid'][0] * 0.24")
+    _set_par(palette_tone, "opacity", 1.0)
 
     low_warp = _create(root, "displaceTOP", "cover_low_displace", -560, -120, (0.12, 0.20, 0.18))
     _connect(low_warp, root.op("null_album_art_engine"), 0)
@@ -366,12 +381,12 @@ def _build_spectral_texture_lane(root):
 
     grain_blend = _create(root, "compositeTOP", "grain_over_cover", -80, -260, (0.12, 0.20, 0.18))
     _connect(grain_blend, mid_warp, 0)
-    _connect(grain_blend, high_noise, 1)
+    _connect(grain_blend, high_noise_tone, 1)
     _set_par(grain_blend, "operand", "add")
 
     palette_blend = _create(root, "compositeTOP", "palette_over_cover", 160, -260, (0.16, 0.12, 0.20))
     _connect(palette_blend, grain_blend, 0)
-    _connect(palette_blend, palette, 1)
+    _connect(palette_blend, palette_tone, 1)
     _set_par(palette_blend, "operand", "screen")
 
     null_texture = _create(root, "nullTOP", "null_spectral_texture", 420, -260, (0.16, 0.12, 0.20))
@@ -400,7 +415,7 @@ def _build_feedback_lane(root, texture):
 
     memory_decay = _create(root, "levelTOP", "feedback_decay", -340, -760, (0.22, 0.14, 0.18))
     _connect(memory_decay, memory_motion)
-    _set_par(memory_decay, "opacity", expr="parent().par.Feedbackdecay")
+    _set_par(memory_decay, "opacity", expr="parent().par.Feedbackdecay.eval()")
     _set_par(memory_decay, "brightness1", 0.98)
 
     composite = _create(root, "compositeTOP", "cover_into_memory", -100, -620, (0.22, 0.14, 0.18))
@@ -414,9 +429,9 @@ def _build_feedback_lane(root, texture):
 
     flash = _create(root, "levelTOP", "kick_snare_flash", 380, -620, (0.22, 0.14, 0.18))
     _connect(flash, bloom)
-    _set_par(flash, "brightness1", expr="parent().par.Brightness + op('null_control')['kick'][0] * 0.4")
+    _set_par(flash, "brightness1", expr="parent().par.Brightness.eval() + op('null_control')['kick'][0] * 0.4")
     _set_par(flash, "contrast", expr="1.0 + op('null_control')['snare'][0] * 0.55")
-    _set_par(flash, "opacity", expr="0.9 + parent().par.Visualintensity * 0.1")
+    _set_par(flash, "opacity", expr="0.9 + parent().par.Visualintensity.eval() * 0.1")
 
     final_motion = _create(root, "transformTOP", "final_micro_drift", 620, -620, (0.22, 0.14, 0.18))
     _connect(final_motion, flash)
@@ -445,7 +460,7 @@ def _build_visible_mapper_lane(root, visual):
     freeze_switch = _create(root, "switchTOP", "freeze_switch", -580, -1040, (0.14, 0.16, 0.24))
     _connect(freeze_switch, corner, 0)
     _connect(freeze_switch, freeze_feedback, 1)
-    _set_par(freeze_switch, "index", expr="1 if parent().par.Freeze else 0")
+    _set_par(freeze_switch, "index", expr="1 if parent().par.Freeze.eval() else 0")
     _set_par(freeze_feedback, "top", freeze_switch.path)
 
     grid_cell = _create(root, "rectangleTOP", "mapper_grid_cell", -820, -1440, (0.14, 0.16, 0.24))
@@ -478,7 +493,7 @@ def _build_visible_mapper_lane(root, visual):
     _connect(safety, freeze_switch, 0)
     _connect(safety, blackout, 1)
     _connect(safety, grid, 2)
-    _set_par(safety, "index", expr="2 if parent().par.Showgrid else (1 if parent().par.Blackout else 0)")
+    _set_par(safety, "index", expr="2 if parent().par.Showgrid.eval() else (1 if parent().par.Blackout.eval() else 0)")
 
     projector = _create(root, "nullTOP", "null_projector", -80, -1040, (0.14, 0.16, 0.24))
     _connect(projector, safety)
