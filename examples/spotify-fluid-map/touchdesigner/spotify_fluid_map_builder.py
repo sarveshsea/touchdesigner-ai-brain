@@ -134,6 +134,7 @@ def _build_metadata_lane(root):
     script.text = METADATA_SCRIPT
     meta = _create(root, "scriptCHOP", "spotify_meta_chop", -300, 520, (0.18, 0.15, 0.22))
     _set_par(meta, "callbacks", script.path)
+    _set_par(meta, "timeslice", False)
 
     smooth = _create(root, "filterCHOP", "metadata_smooth", -80, 520, (0.18, 0.15, 0.22))
     _connect(smooth, meta)
@@ -167,6 +168,7 @@ def _build_audio_lane(root):
     analysis = _create(root, "scriptCHOP", "audio_analysis_chop", -360, 280, (0.12, 0.22, 0.16))
     _connect(analysis, gain)
     _set_par(analysis, "callbacks", script.path)
+    _set_par(analysis, "timeslice", False)
 
     smooth = _create(root, "filterCHOP", "audio_smooth", -120, 280, (0.12, 0.22, 0.16))
     _connect(smooth, analysis)
@@ -465,6 +467,10 @@ def _float(values, key, default=0.0):
 
 
 def onCook(scriptOp):
+    try:
+        scriptOp.isTimeSlice = False
+    except Exception:
+        pass
     scriptOp.clear()
     scriptOp.numSamples = 1
     values = _latest_values(op('spotify_osc'))
@@ -551,6 +557,10 @@ def _pulse(scriptOp, key, value, threshold):
 
 
 def onCook(scriptOp):
+    try:
+        scriptOp.isTimeSlice = False
+    except Exception:
+        pass
     scriptOp.clear()
     scriptOp.numSamples = 1
     samples = _samples_from_input(scriptOp)
