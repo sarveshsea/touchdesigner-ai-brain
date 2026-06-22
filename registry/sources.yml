@@ -1,0 +1,64 @@
+generated: "2026-06-22"
+local_touchdesigner_version: "2023.11600"
+sources:
+  - id: embody-envoy
+    name: Embody / Envoy
+    type: mcp-live-build
+    url: https://github.com/dylanroscover/Embody
+    priority: primary
+    notes: Embedded localhost MCP bridge with .tdn export/import and live operator control.
+  - id: touchdesigner-mcp-webserver
+    name: 8beeeaaat TouchDesigner MCP
+    type: mcp-live-build
+    url: https://github.com/8beeeaaat/touchdesigner-mcp
+    priority: backup
+    notes: WebServer DAT bridge with Codex installation notes.
+  - id: td-docs-mcp
+    name: bottobot TouchDesigner Documentation MCP
+    type: mcp-reference
+    url: https://github.com/bottobot/touchdesigner-mcp-server
+    priority: reference
+    notes: Operator docs, Python API, tutorials, and workflow patterns.
+  - id: derivative-palette
+    name: TouchDesigner Palette
+    type: first-party-components
+    url: https://docs.derivative.ca/Category:Palette
+    priority: first-party
+    notes: Built-in component and media library.
+  - id: derivative-projection-mapping
+    name: Derivative Projection Mapping Docs
+    type: first-party-docs
+    url: https://docs.derivative.ca/Projection_Mapping
+    priority: first-party
+    notes: Kantan Mapper, CamSchnappr, Projector Blend, Stoner, Quad Reproject, Vioso, Scalable Displays.
+  - id: strobber-tox
+    name: Strobber Tox
+    type: community-asset
+    url: https://derivative.ca/community-post/asset/strobber-tox-%E2%94%83-top-effector-audio-reactive/71752
+    priority: candidate
+    notes: Audio-reactive TOP strobe/glitch effect. Listed as TouchDesigner 2023-compatible.
+  - id: td-synapse
+    name: TD Synapse
+    type: community-asset
+    url: https://derivative.ca/community-post/asset/td-synapse/74347
+    priority: candidate
+    notes: Drop-in performance telemetry component with websocket browser UI.
+  - id: maxmainio-td-components
+    name: MaxMainio TD_ Components
+    type: community-asset-repo
+    url: https://github.com/MaxMainio/TD_
+    priority: candidate
+    notes: Image-processing components; living repo requiring per-component smoke tests.
+  - id: raytk
+    name: RayTK
+    type: community-toolkit
+    url: https://github.com/t3kt/raytk
+    priority: candidate
+    notes: Raymarching/shader network toolkit. Version-gate for TD 2023.
+  - id: fulldome-simulator
+    name: TouchDesigner Fulldome Simulator TOX
+    type: community-asset
+    url: https://derivative.ca/community-post/asset/touchdesigner-fulldome-simulator-tox-beta/72740
+    priority: candidate
+    notes: Dome projection preview; TD 2022 origin, later versions not fully tested.
+

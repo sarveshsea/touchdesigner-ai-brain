@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "envoy": {
+      "type": "http",
+      "url": "http://localhost:9870/mcp"
+    },
+    "touchdesigner-docs": {
+      "command": "npx",
+      "args": ["-y", "@bottobot/td-mcp"]
+    }
+  }
+}
+
